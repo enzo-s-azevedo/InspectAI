@@ -13,8 +13,8 @@ qualidade.
 ## Tecnologias Utilizadas
 
 -   Front-end e Back-end: Next.js (JavaScript)
--   Estilização: Tailwind CSS\
--   Banco de Dados: MySQL\
+-   Estilização: Tailwind CSS
+-   Banco de Dados: MySQL
 -   Containerização: Docker
 
 ------------------------------------------------------------------------
@@ -26,11 +26,14 @@ qualidade.
 O sistema permite a análise de uma ou múltiplas imagens contendo
 componentes eletrônicos.
 
-**Entrada:** - Uma ou mais imagens
+**Entrada:** 
+- Uma ou mais imagens
 
-**Saída:** - Identificação dos defeitos presentes - Recorte automático
-das regiões com defeito (com zoom) - Classificação do tipo de defeito -
-Navegação entre defeitos detectados
+**Saída:** 
+- Identificação dos defeitos presentes 
+- Recorte automático das regiões com defeito (com zoom) 
+- Classificação do tipo de defeito 
+- Navegação entre defeitos detectados
 
 ------------------------------------------------------------------------
 
@@ -38,10 +41,13 @@ Navegação entre defeitos detectados
 
 O sistema realiza a detecção de defeitos a partir de vídeos.
 
-**Funcionalidades:** - Processamento contínuo de vídeo com detecção de
-defeitos - Registro automático de data e hora de cada detecção -
-Processamento em lote: - Definição da quantidade de placas a serem
-analisadas - Geração de relatório consolidado ao final do processamento
+**Funcionalidades:** 
+- Processamento contínuo de vídeo com detecção de
+defeitos 
+- Registro automático de data e hora de cada detecção 
+- Processamento em lote:
+    - Definição da quantidade de placas a serem analisadas
+    - Geração de relatório consolidado ao final do processamento
 
 ------------------------------------------------------------------------
 
@@ -49,10 +55,12 @@ analisadas - Geração de relatório consolidado ao final do processamento
 
 O sistema mantém um repositório estruturado de defeitos.
 
-**Requisitos:** - Armazenamento de tipos de defeitos por tipo de
-componente - Associação dos defeitos às placas analisadas - Geração de
-métricas: - Quantidade de ocorrências - Percentual em relação ao total
-de defeitos
+**Requisitos:** 
+- Armazenamento de tipos de defeitos por tipo de componente 
+- Associação dos defeitos às placas analisadas 
+- Geração de métricas: 
+  - Quantidade de ocorrências 
+  - Percentual em relação ao total de defeitos
 
 ------------------------------------------------------------------------
 
@@ -143,29 +151,3 @@ docker-compose up --build
 ├── styles/
 └── README.md
 ```
-
-------------------------------------------------------------------------
-
-## Possíveis Extensões
-
--   Integração com modelos de inteligência artificial mais avançados
--   Dashboard com atualização em tempo real
--   Sistema de alertas baseado em volume de defeitos
--   Integração com dispositivos IoT industriais
--   Exportação de relatórios em múltiplos formatos
-
-------------------------------------------------------------------------
-
-## Contribuição
-
-1.  Realize um fork do projeto\
-2.  Crie uma branch (`feature/nome-da-feature`)\
-3.  Realize os commits necessários\
-4.  Envie para o repositório remoto\
-5.  Abra um Pull Request
-
-------------------------------------------------------------------------
-
-## Licença
-
-Este projeto está licenciado sob a licença MIT.
