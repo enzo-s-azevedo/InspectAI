@@ -12,6 +12,7 @@ qualidade.
 
 ## Tecnologias Utilizadas
 
+
 -   Front-end e Back-end: Next.js (JavaScript)
 -   Estilização: Tailwind CSS
 -   Banco de Dados: MySQL
