@@ -1,0 +1,53 @@
+{
+  "categories": [
+    {
+      "id": 0,
+      "name": "C+"
+    },
+    {
+      "id": 1,
+      "name": "C-"
+    },
+    {
+      "id": 2,
+      "name": "R+"
+    },
+    {
+      "id": 3,
+      "name": "R-"
+    },
+    {
+      "id": 4,
+      "name": "R\/CFaltante"
+    },
+    {
+      "id": 5,
+      "name": "Soldagem+"
+    },
+    {
+      "id": 6,
+      "name": "SoldagemCurtoCircuito"
+    },
+    {
+      "id": 7,
+      "name": "SoldagemFaltando"
+    },
+    {
+      "id": 8,
+      "name": "U+"
+    },
+    {
+      "id": 9,
+      "name": "U-"
+    },
+    {
+      "id": 10,
+      "name": "UFaltante"
+    }
+  ],
+  "info": {
+    "year": 2026,
+    "version": "1.0",
+    "contributor": "Label Studio"
+  }
+}
