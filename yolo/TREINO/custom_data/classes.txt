@@ -1,0 +1,11 @@
+C+
+C-
+R+
+R-
+R/CFaltante
+Soldagem+
+SoldagemCurtoCircuito
+SoldagemFaltando
+U+
+U-
+UFaltante

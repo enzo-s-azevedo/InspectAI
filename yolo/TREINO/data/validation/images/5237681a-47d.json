@@ -1,0 +1,14 @@
+[
+  {
+    "Id": 1,
+    "classe": "SoldagemFaltando",
+    "nome_arquivo_defeito": "5237681a-47d.jpg",
+    "data_hora": "now"
+  },
+  {
+    "Id": 2,
+    "classe": "SoldagemFaltando",
+    "nome_arquivo_defeito": "5237681a-47d.jpg",
+    "data_hora": "now"
+  }
+]
