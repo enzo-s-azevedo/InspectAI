@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #0d0d0d;
+  --color-bg-panel: #141414;
+  --color-bg-card: #1a1a1a;
+  --color-bg-elevated: #222222;
+
+  --color-border: #2e2040;
+  --color-border-subtle: #1e1530;
+
+  --color-text-primary: #f0eeff;
+  --color-text-secondary: #9d8fbe;
+  --color-text-muted: #4e4270;
+
+  --color-amber: #9d5ff5;
+  --color-amber-600: #7c3aed;
+
+  --color-critical-text: #ef4444;
+  --color-critical-bg: rgba(239,68,68,0.10);
+  --color-critical-border: rgba(239,68,68,0.30);
+
+  --color-warning-text: #f59e0b;
+  --color-warning-bg: rgba(245,158,11,0.10);
+  --color-warning-border: rgba(245,158,11,0.30);
+
+  --color-success-text: #22c55e;
+  --color-success-bg: rgba(34,197,94,0.10);
+  --color-success-border: rgba(34,197,94,0.30);
+
+  --color-info-text: #3b82f6;
+  --color-info-bg: rgba(59,130,246,0.10);
+  --color-info-border: rgba(59,130,246,0.30);
+
+  --color-neutral-text: #9d8fbe;
+  --color-neutral-bg: rgba(124,58,237,0.10);
+  --color-neutral-border: rgba(124,58,237,0.30);
+
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
