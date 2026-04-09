@@ -59,3 +59,6 @@ export default function DefeitosPage() {
     </AppShell>
   )
 }
+
+
+// build fixed// build fixed
