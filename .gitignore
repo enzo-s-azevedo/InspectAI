@@ -1,0 +1,21 @@
+# Dependências
+node_modules/
+
+# Builds do Next.js
+.next/
+out/
+build/
+
+# Docker logs e dados
+*.log
+mysql_data/
+inspectai_mysql_data/
+
+# Modelos pesados de IA
+*.pt
+
+# Arquivos do sistema e IDE
+.DS_Store
+.vscode/
+.env
+.env.local

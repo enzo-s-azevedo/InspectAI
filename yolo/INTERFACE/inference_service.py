@@ -180,3 +180,39 @@ class YoloInferenceService:
 
         detections.sort(key=lambda item: float(item["confidence"]), reverse=True)
         return detections
+
+
+from flask import Flask, request, jsonify
+import numpy as np
+
+app = Flask(__name__)
+
+# Instancia a classe que você já tem
+# Ele vai procurar automaticamente o modelo .pt na pasta
+base_path = Path(__file__).parent
+model_file = YoloInferenceService.find_latest_model(base_path)
+service = YoloInferenceService(model_file)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'image' not in request.files:
+        return jsonify({"error": "Nenhuma imagem enviada"}), 400
+    
+    # Converte a imagem recebida para o formato que o OpenCV entende
+    file = request.files['image'].read()
+    np_img = np.frombuffer(file, np.uint8)
+    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+
+    # Roda a inferência (usando a sua classe)
+    # Aqui passamos sets vazios para usar os labels padrão da classe
+    detections = service.predict_defects(img, set(), set())
+    
+    return jsonify(detections)
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "IA Online", "model": str(model_file.name)}), 200
+
+if __name__ == '__main__':
+    # '0.0.0.0' permite que o Docker receba conexões externas
+    app.run(host='0.0.0.0', port=5000)
