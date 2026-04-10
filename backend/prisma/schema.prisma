@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USUÁRIOS ====================
+model Usuario {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nome      String
+  papel     String   @default("funcionario") // admin, funcionario, inspetor
+  status    String   @default("ativo") // ativo, inativo
+  avatar    String?
+  criado    DateTime @default(now())
+  atualizado DateTime @updatedAt
+
+  // Relations
+  defeitos       Defeito[]
+  relatorios     Relatorio[]
+  inspecoes      Inspecao[]
+
+  @@map("usuarios")
+}
+
+// ==================== PLACAS ====================
+model Placa {
+  id          String   @id @default(cuid())
+  codigo      String   @unique // PCB-AALLL-LX
+  descricao   String?
+  localizacao String?
+  criado      DateTime @default(now())
+  atualizado  DateTime @updatedAt
+
+  // Relations
+  defeitos   Defeito[]
+  inspecoes  Inspecao[]
+
+  @@map("placas")
+}
+
+// ==================== DEFEITOS ====================
+model Defeito {
+  id          String   @id @default(cuid())
+  codigoInterno String  @unique @default(cuid()) // #DEF-XXXX
+  placaId     String
+  placa       Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
+  
+  tipo        String   // rachadura, oxidacao, solda-fria, etc
+  componente  String?  // descrição do componente afetado
+  origem      String   // manual, automatico, importado
+  severidade  String   @default("media") // baixa, media, alta, critica
+  descricao   String?  @db.Text
+  
+  status      String   @default("aberto") // aberto, em-analise, resolvido, descartado
+  usuarioId   String?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  
+  criado      DateTime @default(now())
+  atualizado  DateTime @updatedAt
+  resolvido   DateTime?
+
+  // Relations
+  imagens     ImagemDefeito[]
+  inspecoes   Inspecao[]
+  relatorios  RelatorioDefeito[]
+
+  @@index([placaId])
+  @@index([usuarioId])
+  @@index([status])
+  @@index([criado])
+  @@map("defeitos")
+}
+
+// ==================== IMAGENS ====================
+model ImagemDefeito {
+  id        String   @id @default(cuid())
+  defeitoId String
+  defeito   Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
+  
+  url       String
+  tipo      String   @default("original") // original, processada, anotada
+  metadados Json?    // contém dados EXIF, coordenadas, etc
+  
+  criado    DateTime @default(now())
+
+  @@index([defeitoId])
+  @@map("imagens_defeitos")
+}
+
+// ==================== INSPEÇÕES ====================
+model Inspecao {
+  id        String   @id @default(cuid())
+  placaId   String
+  placa     Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
+  
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  
+  tipo      String   @default("manual") // manual, automatizado, resumida
+  descricao String?  @db.Text
+  status    String   @default("em-progresso") // em-progresso, concluida, cancelada
+  
+  criado    DateTime @default(now())
+  concluido DateTime?
+  atualizado DateTime @updatedAt
+
+  // Relations
+  defeitos   Defeito[]
+
+  @@index([placaId])
+  @@index([usuarioId])
+  @@index([criado])
+  @@map("inspecoes")
+}
+
+// ==================== RELATÓRIOS ====================
+model Relatorio {
+  id        String   @id @default(cuid())
+  codigoInterno String @unique @default(cuid()) // REL-XXX
+  titulo    String
+  descricao String? @db.Text
+  
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  
+  origem    String   @default("inspecao") // inspecao, analise-manual
+  status    String   @default("rascunho") // rascunho, finalizado, arquivado
+  
+  criado    DateTime @default(now())
+  atualizado DateTime @updatedAt
+
+  // Relations
+  defeitos  RelatorioDefeito[]
+
+  @@index([usuarioId])
+  @@index([criado])
+  @@map("relatorios")
+}
+
+// ==================== RELAÇÃO MUITOS-PARA-MUITOS ====================
+model RelatorioDefeito {
+  id        String @id @default(cuid())
+  relatorioId String
+  relatorio Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
+  
+  defeitoId String
+  defeito   Defeito   @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
+  
+  notas     String? @db.Text
+  criado    DateTime @default(now())
+
+  @@unique([relatorioId, defeitoId])
+  @@index([defeitoId])
+  @@map("relatorios_defeitos")
+}
