@@ -1,0 +1,42 @@
+services:
+  # Banco de Dados do InspectAI (Porta 3307)
+  db:
+    image: mysql:8.0
+    container_name: inspectai_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: inspectai_db
+    ports:
+      - "3307:3306" # Mudamos a porta externa para 3307
+    volumes:
+      - inspectai_mysql_data:/var/lib/mysql
+
+  # Aplicação Next.js (Porta 3001)
+  app:
+    build: ./backend
+    container_name: inspectai_app
+    ports:
+      - "3001:3000" # Mudamos a porta externa para 3001
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    environment:
+      # IMPORTANTE: Internamente o container 'db' continua na 3306
+      DATABASE_URL: mysql://root:root_password@db:3306/inspectai_db
+
+# Serviço de Inteligência Artificial (YOLO)
+  ai:
+    build: ./yolo/INTERFACE
+    container_name: inspectai_yolo
+    ports:
+      - "5005:5000"
+    volumes:
+      - ./yolo/INTERFACE:/app
+    tty: true # Adicione isso para manter o container "vivo" caso não tenha servidor web
+    stdin_open: true 
+
+volumes:
+  inspectai_mysql_data:
