@@ -1,42 +1,83 @@
 services:
-  # Banco de Dados do InspectAI (Porta 3307)
   db:
     image: mysql:8.0
     container_name: inspectai_db
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: inspectai_db
+      MYSQL_DATABASE: inspectai
     ports:
-      - "3307:3306" # Mudamos a porta externa para 3307
+      - "3307:3306"
     volumes:
       - inspectai_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # Aplicação Next.js (Porta 3001)
-  app:
-    build: ./backend
-    container_name: inspectai_app
-    ports:
-      - "3001:3000" # Mudamos a porta externa para 3001
-    volumes:
-      - .:/app
-      - /app/node_modules
-    depends_on:
-      - db
-    environment:
-      # IMPORTANTE: Internamente o container 'db' continua na 3306
-      DATABASE_URL: mysql://root:root_password@db:3306/inspectai_db
-
-# Serviço de Inteligência Artificial (YOLO)
   ai:
     build: ./yolo/INTERFACE
-    container_name: inspectai_yolo
+    container_name: inspectai_ai
+    restart: unless-stopped
     ports:
       - "5005:5000"
+
+  backend:
+    build: ./backend
+    container_name: inspectai_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      ai:
+        condition: service_started
+    environment:
+      DATABASE_URL: mysql://root:root_password@db:3306/inspectai
+      AI_SERVICE_URL: http://ai:5000
+      NODE_ENV: production
+    ports:
+      - "3001:3000"
+
+  frontend:
+    build: .
+    container_name: inspectai_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:3000
+      NEXT_PUBLIC_API_BASE_URL: /backend-api
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+  integration-tests:
+    image: node:20-alpine
+    container_name: inspectai_integration_tests
+    profiles: ["test"]
+    working_dir: /workspace
     volumes:
-      - ./yolo/INTERFACE:/app
-    tty: true # Adicione isso para manter o container "vivo" caso não tenha servidor web
-    stdin_open: true 
+      - ./:/workspace
+    depends_on:
+      db:
+        condition: service_healthy
+      ai:
+        condition: service_started
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+    environment:
+      BACKEND_BASE_URL: http://backend:3000/api
+      FRONTEND_BASE_URL: http://frontend:3000
+      FRONTEND_API_BASE_URL: http://frontend:3000/backend-api
+      AI_BASE_URL: http://ai:5000
+      DB_HOST: db
+      DB_PORT: 3306
+      REPORT_OUTPUT_PATH: /workspace/integration-report.md
+    command: ["node", "scripts/run-integration-tests.js"]
 
 volumes:
   inspectai_mysql_data:

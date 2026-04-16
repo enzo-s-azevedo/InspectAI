@@ -81,8 +81,10 @@ async function main() {
   console.log('✓ Placas criadas:', { placa1: placa1.codigo, placa2: placa2.codigo, placa3: placa3.codigo });
 
   // Criar defeitos de exemplo
-  const defeito1 = await prisma.defeito.create({
-    data: {
+  const defeito1 = await prisma.defeito.upsert({
+    where: { codigoInterno: 'DEF-0001' },
+    update: {},
+    create: {
       codigoInterno: 'DEF-0001',
       tipo: 'rachadura',
       componente: 'Capacitor C10',
@@ -95,8 +97,10 @@ async function main() {
     },
   });
 
-  const defeito2 = await prisma.defeito.create({
-    data: {
+  const defeito2 = await prisma.defeito.upsert({
+    where: { codigoInterno: 'DEF-0002' },
+    update: {},
+    create: {
       codigoInterno: 'DEF-0002',
       tipo: 'oxidacao',
       componente: 'Trilha de cobre',
@@ -112,8 +116,10 @@ async function main() {
   console.log('✓ Defeitos criados:', { defeito1: defeito1.codigoInterno, defeito2: defeito2.codigoInterno });
 
   // Criar relatório
-  const relatorio = await prisma.relatorio.create({
-    data: {
+  const relatorio = await prisma.relatorio.upsert({
+    where: { codigoInterno: 'REL-001' },
+    update: {},
+    create: {
       codigoInterno: 'REL-001',
       titulo: 'Inspeção PCB-A001-L1 - Abril 2026',
       descricao: 'Inspeção de qualidade realizada em 09/04/2026',
@@ -138,19 +144,29 @@ async function main() {
   console.log('✓ Relatório criado:', relatorio.codigoInterno);
 
   // Criar inspeção
-  const inspecao = await prisma.inspecao.create({
-    data: {
-      tipo: 'manual',
-      descricao: 'Inspeção visual da placa PCB-A001-L1',
-      status: 'concluida',
+  let inspecao = await prisma.inspecao.findFirst({
+    where: {
       placaId: placa1.id,
       usuarioId: inspetor.id,
-      concluido: new Date(),
-      defeitos: {
-        connect: [{ id: defeito1.id }],
-      },
+      descricao: 'Inspeção visual da placa PCB-A001-L1',
     },
   });
+
+  if (!inspecao) {
+    inspecao = await prisma.inspecao.create({
+      data: {
+        tipo: 'manual',
+        descricao: 'Inspeção visual da placa PCB-A001-L1',
+        status: 'concluida',
+        placaId: placa1.id,
+        usuarioId: inspetor.id,
+        concluido: new Date(),
+        defeitos: {
+          connect: [{ id: defeito1.id }],
+        },
+      },
+    });
+  }
 
   console.log('✓ Inspeção criada:', inspecao.id);
 

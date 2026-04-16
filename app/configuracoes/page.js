@@ -1,7 +1,15 @@
 'use client'
+import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
+import { api } from '@/services/api'
 
 export default function AjustesPage() {
+  const [health, setHealth] = useState(null)
+
+  useEffect(() => {
+    api.getHealth().then(setHealth).catch(() => setHealth(null))
+  }, [])
+
   return (
     <AppShell breadcrumb="Sistema / Ajustes">
       <div className="p-8 max-w-2xl mx-auto space-y-12">
@@ -33,6 +41,13 @@ export default function AjustesPage() {
         <button className="w-full py-3 bg-white text-black font-mono text-[10px] font-black uppercase rounded hover:bg-fuchsia-500 hover:text-white transition-all">
           Salvar Alterações
         </button>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <p className="text-[10px] font-black uppercase text-white/70 mb-1">Saúde dos serviços</p>
+          <p className="text-[11px] text-white/40 font-mono">API: {health?.api || 'indisponivel'}</p>
+          <p className="text-[11px] text-white/40 font-mono">Database: {health?.database || 'indisponivel'}</p>
+          <p className="text-[11px] text-white/40 font-mono">IA: {health?.ai?.status || 'indisponivel'}</p>
+        </div>
       </div>
     </AppShell>
   )

@@ -1,15 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import Badge from '@/components/Badge'
-
-const users = [
-  { id: 1, nome: 'José Leandro',  email: 'jose.leandro@inspect.ai',  papel: 'Administrador', status: 'success', statusLabel: 'Ativo',   avatar: 'JL', criado: '10/01/2025' },
-  { id: 2, nome: 'Ana Silva',     email: 'ana.silva@inspect.ai',      papel: 'Funcionário',   status: 'success', statusLabel: 'Ativo',   avatar: 'AS', criado: '15/01/2025' },
-  { id: 3, nome: 'Carlos Mendes', email: 'carlos.mendes@inspect.ai',  papel: 'Funcionário',   status: 'neutral', statusLabel: 'Inativo', avatar: 'CM', criado: '08/01/2025' },
-  { id: 4, nome: 'Beatriz Costa', email: 'beatriz.costa@inspect.ai',  papel: 'Administrador', status: 'success', statusLabel: 'Ativo',   avatar: 'BC', criado: '05/01/2025' },
-]
+import { api } from '@/services/api'
+import { toast } from 'sonner'
 
 const permissions = [
   { key: 'visualizar', label: 'Visualizar defeitos' },
@@ -20,7 +15,56 @@ const permissions = [
 ]
 
 export default function UsuariosPage() {
+  const [users, setUsers] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ nome: '', email: '', papel: 'funcionario' })
+
+  const userCountLabel = useMemo(() => `${users.length} usuários cadastrados`, [users.length])
+
+  const loadUsuarios = async () => {
+    try {
+      setIsLoading(true)
+      const data = await api.getUsuarios()
+      setUsers(data)
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadUsuarios()
+  }, [])
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    try {
+      await api.createUsuario(form)
+      toast.success('Usuário criado com sucesso')
+      setForm({ nome: '', email: '', papel: 'funcionario' })
+      setShowForm(false)
+      await loadUsuarios()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  const mapStatus = (status) => {
+    if (status === 'ativo') return { variant: 'success', label: 'Ativo' }
+    if (status === 'inativo') return { variant: 'neutral', label: 'Inativo' }
+    return { variant: 'warning', label: status }
+  }
+
+  const initials = (nome) =>
+    String(nome || '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((item) => item[0])
+      .join('')
+      .toUpperCase()
 
   return (
     <AppShell breadcrumb="/ Usuários">
@@ -30,7 +74,7 @@ export default function UsuariosPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-semibold">Usuários</h1>
-            <p className="font-mono text-2xs text-text-muted mt-1">// {users.length} usuários cadastrados</p>
+            <p className="font-mono text-2xs text-text-muted mt-1">// {userCountLabel}</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -43,26 +87,38 @@ export default function UsuariosPage() {
 
         {/* New user form */}
         {showForm && (
-          <div className="bg-bg-card border border-amber/30 rounded-xl p-5">
+          <form onSubmit={handleSubmit} className="bg-bg-card border border-amber/30 rounded-xl p-5">
             <h2 className="font-mono text-xs text-text-secondary uppercase tracking-label mb-4">Cadastrar Usuário</h2>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Nome completo</label>
-                <input placeholder="Ex: João da Silva" className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast" />
+                <input
+                  value={form.nome}
+                  onChange={(event) => setForm((previous) => ({ ...previous, nome: event.target.value }))}
+                  placeholder="Ex: João da Silva"
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
+                />
               </div>
               <div>
                 <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">E-mail</label>
-                <input type="email" placeholder="joao@inspect.ai" className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast" />
-              </div>
-              <div>
-                <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Senha</label>
-                <input type="password" placeholder="••••••••" className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast" />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
+                  placeholder="joao@inspect.ai"
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
+                />
               </div>
               <div>
                 <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Papel</label>
-                <select className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber transition-all duration-fast">
-                  <option>Funcionário</option>
-                  <option>Administrador</option>
+                <select
+                  value={form.papel}
+                  onChange={(event) => setForm((previous) => ({ ...previous, papel: event.target.value }))}
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber transition-all duration-fast"
+                >
+                  <option value="funcionario">Funcionário</option>
+                  <option value="admin">Administrador</option>
+                  <option value="inspetor">Inspetor</option>
                 </select>
               </div>
             </div>
@@ -78,14 +134,14 @@ export default function UsuariosPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button className="px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer">
+              <button type="submit" className="px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer">
                 Salvar
               </button>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-border text-text-secondary rounded-md font-mono text-xs hover:bg-bg-elevated transition-all duration-fast cursor-pointer">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-border text-text-secondary rounded-md font-mono text-xs hover:bg-bg-elevated transition-all duration-fast cursor-pointer">
                 Cancelar
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* Users table */}
@@ -99,20 +155,22 @@ export default function UsuariosPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
+              {!isLoading && users.map(u => {
+                const status = mapStatus(u.status)
+                return (
                 <tr key={u.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center font-mono text-xs font-semibold text-amber flex-shrink-0">
-                        {u.avatar}
+                        {u.avatar || initials(u.nome)}
                       </div>
                       <span className="text-xs font-medium text-text-primary">{u.nome}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-text-secondary">{u.email}</td>
                   <td className="px-4 py-3 text-xs text-text-secondary">{u.papel}</td>
-                  <td className="px-4 py-3"><Badge variant={u.status}>{u.statusLabel}</Badge></td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-muted">{u.criado}</td>
+                  <td className="px-4 py-3"><Badge variant={status.variant}>{status.label}</Badge></td>
+                  <td className="px-4 py-3 font-mono text-xs text-text-muted">{new Date(u.criado).toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-3">
                       <button className="font-mono text-2xs text-amber hover:underline cursor-pointer">Editar</button>
@@ -120,7 +178,14 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
+              {isLoading && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-text-muted text-xs font-mono uppercase">
+                    Carregando usuarios...
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

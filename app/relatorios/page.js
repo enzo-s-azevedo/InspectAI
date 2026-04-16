@@ -1,11 +1,34 @@
 'use client'
+import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
+import { api } from '@/services/api'
+import { toast } from 'sonner'
 
 export default function RelatoriosPage() {
-  const relatorios = [
-    { id: 1, nome: 'Produção_Semanal_02.pdf', data: '14/01/2026', status: 'Concluído' },
-    { id: 2, nome: 'Auditoria_Lote_X45.xlsx', data: '12/01/2026', status: 'Gerando...' },
-  ]
+  const [relatorios, setRelatorios] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadRelatorios = async () => {
+      try {
+        setIsLoading(true)
+        const data = await api.getRelatorios()
+        setRelatorios(data)
+      } catch (error) {
+        toast.error(error.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadRelatorios()
+  }, [])
+
+  const humanStatus = (status) => {
+    if (status === 'finalizado') return 'Concluido'
+    if (status === 'rascunho') return 'Rascunho'
+    return status
+  }
 
   return (
     <AppShell breadcrumb="Controle / Relatórios">
@@ -16,15 +39,17 @@ export default function RelatoriosPage() {
         </div>
 
         <div className="grid gap-3">
-          {relatorios.map(rel => (
+          {!isLoading && relatorios.map((rel) => (
             <div key={rel.id} className="bg-white/[0.02] border border-white/5 p-4 rounded-xl flex items-center justify-between hover:border-white/10 transition-all group">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white/40">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 </div>
                 <div>
-                  <p className="text-[11px] font-black text-white uppercase tracking-tight">{rel.nome}</p>
-                  <p className="text-[9px] text-white/20 font-mono uppercase tracking-widest">{rel.data} · {rel.status}</p>
+                  <p className="text-[11px] font-black text-white uppercase tracking-tight">{rel.titulo}</p>
+                  <p className="text-[9px] text-white/20 font-mono uppercase tracking-widest">
+                    {new Date(rel.criado).toLocaleDateString('pt-BR')} · {humanStatus(rel.status)}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -37,6 +62,11 @@ export default function RelatoriosPage() {
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="bg-white/[0.02] border border-white/5 p-6 rounded-xl text-center text-[10px] uppercase font-mono text-white/30">
+              Carregando relatorios...
+            </div>
+          )}
         </div>
       </div>
     </AppShell>

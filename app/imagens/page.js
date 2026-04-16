@@ -1,130 +1,122 @@
 'use client'
-import { useState } from 'react'
+
+import { useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
+import { api } from '@/services/api'
+import { toast } from 'sonner'
 
 export default function InspecaoImagens() {
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [currentDefectData, setCurrentDefectData] = useState({
-    nome: 'R/CFaltante',
-    status: 'Defeito'
-  })
+  const [imageFile, setImageFile] = useState(null)
+  const [placaCodigo, setPlacaCodigo] = useState('PCB-AUTO-001')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [detections, setDetections] = useState([])
+  const [savedDefeitos, setSavedDefeitos] = useState([])
+
+  const selectedImageUrl = useMemo(() => {
+    if (!imageFile) return null
+    return URL.createObjectURL(imageFile)
+  }, [imageFile])
+
+  const runDetection = async () => {
+    if (!imageFile) {
+      toast.error('Selecione uma imagem antes de analisar')
+      return
+    }
+
+    try {
+      setIsAnalyzing(true)
+      const result = await api.analisarImagem({ imageFile, placaCodigo })
+      setDetections(Array.isArray(result.detections) ? result.detections : [])
+      setSavedDefeitos(Array.isArray(result.savedDefeitos) ? result.savedDefeitos : [])
+      toast.success('Analise concluida com sucesso')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   return (
     <AppShell breadcrumb="Análise / Scanner de PCBs">
       <div className="p-6 h-[calc(100vh-48px)] flex flex-col gap-6 overflow-hidden relative">
-        
-        {/* MODAL DE EDIÇÃO (O Formulário que você pediu) */}
-        {isEditOpen && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <h3 className="font-mono text-sm font-black uppercase text-fuchsia-500 tracking-widest italic">Editar Detecção</h3>
-                <p className="text-[10px] text-white/40 uppercase mt-1">Corrigir dados da Visão Computacional</p>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="text-[9px] text-white/40 uppercase font-black mb-2 block tracking-widest">Nome do Defeito / Componente</label>
-                  <input 
-                    type="text" 
-                    defaultValue={currentDefectData.nome}
-                    className="w-full bg-white/5 border border-white/10 p-3 rounded-lg text-xs text-white outline-none focus:border-fuchsia-500 transition-colors font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9px] text-white/40 uppercase font-black mb-2 block tracking-widest">Status Real</label>
-                  <select className="w-full bg-white/5 border border-white/10 p-3 rounded-lg text-xs text-white outline-none focus:border-fuchsia-500 transition-colors font-mono appearance-none">
-                    <option>Defeito Confirmado</option>
-                    <option>Peça OK (Falso Positivo)</option>
-                  </select>
-                </div>
-              </div>
+        <div className="flex flex-wrap items-end justify-between gap-4 bg-[#0a0a0a] border border-white/5 p-4 rounded-2xl shadow-xl shrink-0">
+          <div className="flex flex-col gap-2 min-w-[280px]">
+            <label className="text-[9px] text-white/30 uppercase font-mono">Imagem para analise</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(event) => setImageFile(event.target.files?.[0] || null)}
+              className="text-xs text-white/70 file:mr-4 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-white/10 file:text-white file:cursor-pointer"
+            />
+          </div>
 
-              <div className="p-4 bg-white/[0.02] border-t border-white/5 flex gap-3">
-                <button onClick={() => setIsEditOpen(false)} className="flex-1 py-3 text-[10px] font-black uppercase text-white/40 hover:text-white transition-colors">Cancelar</button>
-                <button onClick={() => setIsEditOpen(false)} className="flex-1 py-3 bg-fuchsia-600 text-white font-mono text-[10px] font-black uppercase rounded-lg hover:bg-fuchsia-500 transition-all shadow-lg">Atualizar Dados</button>
-              </div>
-            </div>
+          <div className="flex flex-col gap-2 min-w-[220px]">
+            <label className="text-[9px] text-white/30 uppercase font-mono">Codigo da placa</label>
+            <input
+              value={placaCodigo}
+              onChange={(event) => setPlacaCodigo(event.target.value)}
+              className="bg-white/5 border border-white/10 p-3 rounded text-[11px] outline-none focus:border-fuchsia-500 transition-colors font-mono text-fuchsia-400"
+            />
           </div>
-        )}
 
-        {/* BARRA SUPERIOR */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0a0a0a] border border-white/5 p-4 rounded-2xl shadow-xl shrink-0">
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">Carregar Imagem</button>
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">Carregar Pasta</button>
-          </div>
-          <div className="flex-1 max-w-xl hidden md:block">
-            <p className="text-[9px] text-white/30 uppercase font-mono mb-1 tracking-wider">Classes Detectadas</p>
-            <div className="bg-black/40 border border-white/5 p-2 rounded text-[10px] font-mono text-fuchsia-400">C-, R-, U-, R/CFaltante, UFaltante</div>
-          </div>
-          <div className="text-right">
-            <p className="text-[9px] text-white/30 uppercase font-mono">Modelo</p>
-            <p className="text-[10px] text-emerald-500 font-mono italic">YOLO v8 High-Res</p>
-          </div>
+          <button
+            onClick={runDetection}
+            disabled={isAnalyzing}
+            className="px-6 py-3 bg-fuchsia-600 disabled:opacity-40 text-white font-mono text-[10px] font-black uppercase rounded-lg hover:bg-fuchsia-500 transition-all"
+          >
+            {isAnalyzing ? 'Analisando...' : 'Executar deteccao'}
+          </button>
         </div>
 
-        {/* DUAL VIEW GRID */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
-          {/* Painel Esquerdo: Original */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-               <span className="text-[10px] font-black uppercase tracking-widest text-white/60 italic">PCBs Originais</span>
-               <span className="text-[10px] font-mono text-fuchsia-500">1 / 11</span>
+            <div className="p-4 border-b border-white/5 bg-white/[0.02]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/60 italic">Imagem original</span>
             </div>
-            <div className="flex-1 flex items-center justify-center p-4 bg-black/40">
-              <div className="flex flex-col items-center gap-2 text-center text-white/20">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                <span className="font-mono text-[9px] uppercase tracking-widest">Aguardando Imagem Principal</span>
-              </div>
-            </div>
-            <div className="p-4 border-t border-white/5 flex justify-between bg-white/[0.01]">
-              <button className="p-2 hover:text-fuchsia-500 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg></button>
-              <button className="p-2 hover:text-fuchsia-500 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg></button>
+            <div className="flex-1 flex items-center justify-center p-4 bg-black/40 min-h-0">
+              {!selectedImageUrl && (
+                <div className="text-white/20 text-[10px] uppercase font-mono">Aguardando upload de imagem</div>
+              )}
+              {selectedImageUrl && (
+                <img src={selectedImageUrl} alt="Imagem para analise" className="max-h-full max-w-full object-contain rounded-lg border border-white/10" />
+              )}
             </div>
           </div>
 
-          {/* Painel Direito: Defeito */}
           <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-               <span className="text-[10px] font-black uppercase tracking-widest text-white/60 italic">Foco no Defeito</span>
-               <span className="text-[10px] font-mono text-fuchsia-500">Defeito: 1 / 4</span>
+            <div className="p-4 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/60 italic">Deteccoes da IA</span>
+              <span className="text-[10px] font-mono text-fuchsia-500">{detections.length} itens</span>
             </div>
-            <div className="flex-1 flex items-center justify-center p-4 bg-black/40">
-               <div className="w-full h-full border border-white/5 rounded-xl border-dashed flex flex-col items-center justify-center gap-2 text-white/20">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-                <span className="font-mono text-[9px] uppercase tracking-widest">Região Ampliada</span>
-              </div>
-            </div>
-            <div className="p-4 border-t border-white/5 flex justify-between items-center bg-white/[0.01]">
-              <button className="text-[10px] font-black uppercase flex items-center gap-2 hover:text-fuchsia-500 transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7 7-7"/></svg>Anterior</button>
-              <button className="text-[10px] font-black uppercase flex items-center gap-2 hover:text-fuchsia-500 transition-all">Próximo<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7-7 7"/></svg></button>
+            <div className="flex-1 overflow-auto p-4 space-y-3">
+              {detections.length === 0 && (
+                <div className="text-white/20 text-[10px] uppercase font-mono">Nenhuma deteccao ainda</div>
+              )}
+              {detections.map((detection, index) => (
+                <div key={`${detection.label}-${index}`} className="p-3 bg-white/[0.02] border border-white/10 rounded-lg">
+                  <p className="text-[11px] text-white font-black uppercase tracking-tight">{detection.label}</p>
+                  <p className="text-[10px] text-white/40 font-mono">Confianca: {Math.round((detection.confidence || 0) * 100)}%</p>
+                  <p className="text-[10px] text-white/40 font-mono">BBox: {JSON.stringify(detection.bbox || [])}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* FOOTER: Resultado e Ações */}
         <div className="bg-[#0d0d0d] border border-white/5 p-6 rounded-2xl shadow-2xl shrink-0">
-           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-             <div className="space-y-1">
-                <h3 className="text-sm font-black text-white uppercase italic">Análise: <span className="text-fuchsia-500">{currentDefectData.nome}</span></h3>
-                <p className="text-[11px] text-white/50 font-mono tracking-tight leading-relaxed max-w-lg">
-                   IA detectou um possível erro no componente. Valide se a peça está correta ou se é um falso positivo.
-                </p>
-             </div>
-             
-             <div className="flex gap-4 w-full md:w-auto">
-                <button 
-                  onClick={() => setIsEditOpen(true)}
-                  className="flex-1 md:flex-none px-6 py-3 bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/60 transition-all"
-                >
-                  Falso Positivo / Editar
-                </button>
-                <button className="flex-1 md:flex-none px-8 py-3 bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-fuchsia-500/20 transition-all active:scale-95">
-                  Validar Correção
-                </button>
-             </div>
-           </div>
+          <h3 className="text-sm font-black text-white uppercase italic mb-4">Defeitos persistidos</h3>
+          <div className="grid md:grid-cols-2 gap-3 max-h-52 overflow-auto">
+            {savedDefeitos.length === 0 && (
+              <div className="text-[10px] font-mono uppercase text-white/30">Execute uma deteccao para salvar defeitos no banco</div>
+            )}
+            {savedDefeitos.map((defeito) => (
+              <div key={defeito.id} className="border border-white/10 rounded-lg p-3 bg-white/[0.02]">
+                <p className="text-[11px] text-fuchsia-400 font-mono">{defeito.codigoInterno}</p>
+                <p className="text-[10px] text-white/80 uppercase font-black">{defeito.tipo}</p>
+                <p className="text-[10px] text-white/40 font-mono">Placa: {defeito.placa?.codigo || '-'}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </AppShell>

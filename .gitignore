@@ -19,3 +19,4 @@ inspectai_mysql_data/
 .vscode/
 .env
 .env.local
+!.env.example

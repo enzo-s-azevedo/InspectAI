@@ -1,8 +1,6 @@
-// src/app/api/usuarios/route.js
-// API Route Example - GET/POST Usuários
-
-import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { fail, ok, parseQuery, readJson } from '@/lib/http';
+import { serializeUsuario } from '@/lib/serializers';
 
 /**
  * GET /api/usuarios
@@ -11,7 +9,7 @@ import prisma from '@/lib/db';
  */
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = parseQuery(request);
     const papel = searchParams.get('papel');
     const status = searchParams.get('status');
 
@@ -21,32 +19,13 @@ export async function GET(request) {
 
     const usuarios = await prisma.usuario.findMany({
       where,
-      select: {
-        id: true,
-        email: true,
-        nome: true,
-        papel: true,
-        status: true,
-        criado: true,
-        atualizado: true,
-      },
       orderBy: { criado: 'desc' },
     });
 
-    return NextResponse.json(
-      {
-        status: 'sucesso',
-        data: usuarios,
-        total: usuarios.length,
-      },
-      { status: 200 }
-    );
+    return ok(usuarios.map(serializeUsuario), { total: usuarios.length });
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
-    return NextResponse.json(
-      { status: 'erro', mensagem: 'Erro ao listar usuários' },
-      { status: 500 }
-    );
+    return fail('Erro ao listar usuarios');
   }
 }
 
@@ -57,13 +36,11 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
-    const { email, nome, papel, status } = await request.json();
+    const body = await readJson(request);
+    const { email, nome, papel, status } = body || {};
 
     if (!email || !nome) {
-      return NextResponse.json(
-        { status: 'erro', mensagem: 'Email e nome são obrigatórios' },
-        { status: 400 }
-      );
+      return fail('Email e nome sao obrigatorios', 400, 'VALIDATION_ERROR');
     }
 
     const novoUsuario = await prisma.usuario.create({
@@ -73,34 +50,14 @@ export async function POST(request) {
         papel: papel || 'funcionario',
         status: status || 'ativo',
       },
-      select: {
-        id: true,
-        email: true,
-        nome: true,
-        papel: true,
-        status: true,
-      },
     });
 
-    return NextResponse.json(
-      {
-        status: 'sucesso',
-        data: novoUsuario,
-        mensagem: 'Usuário criado com sucesso',
-      },
-      { status: 201 }
-    );
+    return ok(serializeUsuario(novoUsuario), { created: true }, { status: 201 });
   } catch (error) {
     if (error.code === 'P2002') {
-      return NextResponse.json(
-        { status: 'erro', mensagem: 'Email já cadastrado' },
-        { status: 409 }
-      );
+      return fail('Email ja cadastrado', 409, 'UNIQUE_CONSTRAINT');
     }
     console.error('Erro ao criar usuário:', error);
-    return NextResponse.json(
-      { status: 'erro', mensagem: 'Erro ao criar usuário' },
-      { status: 500 }
-    );
+    return fail('Erro ao criar usuario');
   }
 }
