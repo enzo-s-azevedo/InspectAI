@@ -5,8 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "lint": "eslint",
+    "test": "npm run test:integration",
+    "test:integration": "node scripts/run-integration-tests.js",
+    "test:integration:docker": "docker compose --profile test run --rm integration-tests"
   },
   "dependencies": {
     "next": "16.2.2",

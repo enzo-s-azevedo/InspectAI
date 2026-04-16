@@ -1,0 +1,36 @@
+# Final Project Structure
+
+```text
+InspectAI/
+  Dockerfile
+  docker-compose.yml
+  next.config.mjs
+  .dockerignore
+  .env.example
+  app/
+  components/
+  services/
+  backend/
+    Dockerfile
+    .dockerignore
+    .env.example
+    prisma/
+    src/
+      app/
+        api/
+          defeitos/
+          detection/
+          health/
+          placas/
+          relatorios/
+          usuarios/
+      lib/
+        db.js
+        detection.js
+        http.js
+        serializers.js
+  yolo/
+    INTERFACE/
+      Dockerfile
+      inference_service.py
+```

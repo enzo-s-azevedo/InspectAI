@@ -1,8 +1,6 @@
-// src/app/api/placas/route.js
-// API Route Example - GET/POST Placas
-
-import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { fail, ok, readJson } from '@/lib/http';
+import { serializePlaca } from '@/lib/serializers';
 
 /**
  * GET /api/placas
@@ -29,20 +27,10 @@ export async function GET(request) {
       orderBy: { criado: 'desc' },
     });
 
-    return NextResponse.json(
-      {
-        status: 'sucesso',
-        data: placas,
-        total: placas.length,
-      },
-      { status: 200 }
-    );
+    return ok(placas.map(serializePlaca), { total: placas.length });
   } catch (error) {
     console.error('Erro ao listar placas:', error);
-    return NextResponse.json(
-      { status: 'erro', mensagem: 'Erro ao listar placas' },
-      { status: 500 }
-    );
+    return fail('Erro ao listar placas');
   }
 }
 
@@ -53,38 +41,23 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
-    const { codigo, descricao, localizacao } = await request.json();
+    const body = await readJson(request);
+    const { codigo, descricao, localizacao } = body || {};
 
     if (!codigo) {
-      return NextResponse.json(
-        { status: 'erro', mensagem: 'Código da placa é obrigatório' },
-        { status: 400 }
-      );
+      return fail('Codigo da placa e obrigatorio', 400, 'VALIDATION_ERROR');
     }
 
     const novaPlaca = await prisma.placa.create({
       data: { codigo, descricao, localizacao },
     });
 
-    return NextResponse.json(
-      {
-        status: 'sucesso',
-        data: novaPlaca,
-        mensagem: `Placa ${codigo} criada com sucesso`,
-      },
-      { status: 201 }
-    );
+    return ok(serializePlaca(novaPlaca), { created: true }, { status: 201 });
   } catch (error) {
     if (error.code === 'P2002') {
-      return NextResponse.json(
-        { status: 'erro', mensagem: 'Código de placa já existe' },
-        { status: 409 }
-      );
+      return fail('Codigo de placa ja existe', 409, 'UNIQUE_CONSTRAINT');
     }
     console.error('Erro ao criar placa:', error);
-    return NextResponse.json(
-      { status: 'erro', mensagem: 'Erro ao criar placa' },
-      { status: 500 }
-    );
+    return fail('Erro ao criar placa');
   }
 }

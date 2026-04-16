@@ -190,13 +190,22 @@ app = Flask(__name__)
 # Instancia a classe que você já tem
 # Ele vai procurar automaticamente o modelo .pt na pasta
 base_path = Path(__file__).parent
-model_file = YoloInferenceService.find_latest_model(base_path)
-service = YoloInferenceService(model_file)
+model_file = None
+service = None
+
+try:
+    model_file = YoloInferenceService.find_latest_model(base_path)
+    service = YoloInferenceService(model_file)
+except FileNotFoundError:
+    service = None
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
         return jsonify({"error": "Nenhuma imagem enviada"}), 400
+
+    if service is None:
+        return jsonify([])
     
     # Converte a imagem recebida para o formato que o OpenCV entende
     file = request.files['image'].read()
@@ -211,6 +220,8 @@ def predict():
 
 @app.route('/health', methods=['GET'])
 def health():
+    if model_file is None:
+        return jsonify({"status": "IA Online sem modelo", "model": None}), 200
     return jsonify({"status": "IA Online", "model": str(model_file.name)}), 200
 
 if __name__ == '__main__':

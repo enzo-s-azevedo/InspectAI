@@ -1,8 +1,36 @@
 'use client'
+import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import Link from 'next/link'
+import { api } from '@/services/api'
+import { toast } from 'sonner'
 
 export default function HomePage() {
+  const [metrics, setMetrics] = useState({ defeitos: 0, placas: 0, usuarios: 0, aiStatus: 'offline' })
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const [defeitos, placas, usuarios, health] = await Promise.all([
+          api.getDefeitos(),
+          api.getPlacas(),
+          api.getUsuarios(),
+          api.getHealth(),
+        ])
+        setMetrics({
+          defeitos: defeitos.length,
+          placas: placas.length,
+          usuarios: usuarios.length,
+          aiStatus: health?.ai?.status || 'online',
+        })
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+
+    loadDashboard()
+  }, [])
+
   return (
     <AppShell breadcrumb="Início">
       <div className="p-8 max-w-7xl mx-auto space-y-12">
@@ -40,10 +68,10 @@ export default function HomePage() {
         </div>
 
         <div className="p-8 bg-white/[0.01] border border-white/5 rounded-3xl grid grid-cols-2 md:grid-cols-4 gap-12">
-            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">IA Accuracy</p><p className="text-3xl font-black text-white italic">99.4%</p></div>
-            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Placas/h</p><p className="text-3xl font-black text-white italic">1,240</p></div>
-            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Uptime</p><p className="text-3xl font-black text-white italic">14d 08h</p></div>
-            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Latency</p><p className="text-3xl font-black text-white italic text-fuchsia-500">12ms</p></div>
+            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Defeitos</p><p className="text-3xl font-black text-white italic">{metrics.defeitos}</p></div>
+            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Placas</p><p className="text-3xl font-black text-white italic">{metrics.placas}</p></div>
+            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Usuários</p><p className="text-3xl font-black text-white italic">{metrics.usuarios}</p></div>
+            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">IA Status</p><p className="text-3xl font-black text-white italic text-fuchsia-500 uppercase">{metrics.aiStatus}</p></div>
         </div>
       </div>
     </AppShell>

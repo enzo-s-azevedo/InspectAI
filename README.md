@@ -1,90 +1,99 @@
 # InspectAI
 
-## Descrição
+Aplicacao completa para inspeção de placas eletronicas com frontend, backend, banco MySQL e servico de inferencia YOLO.
 
-O InspectAI é um sistema para detecção automática de defeitos em placas
-eletrônicas a partir de imagens e vídeos. A aplicação permite
-identificar, classificar e armazenar defeitos, além de fornecer
-mecanismos de análise e geração de relatórios para apoio ao controle de
-qualidade.
+## Arquitetura
 
-------------------------------------------------------------------------
+- Frontend Next.js: interface de operacao e dashboards
+- Backend Next.js: API REST e persistencia com Prisma
+- Database: MySQL 8
+- IA: Flask + Ultralytics YOLO
+- Orquestracao: Docker Compose
 
-## Tecnologias Utilizadas
+## Contrato JSON padronizado
 
+Todas as rotas do backend respondem no formato:
 
--   Front-end e Back-end: Next.js (JavaScript)
--   Estilização: Tailwind CSS
--   Banco de Dados: MySQL
--   Containerização: Docker
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {},
+  "error": null
+}
+```
 
-------------------------------------------------------------------------
+Em erro:
 
-## Funcionalidades
+```json
+{
+  "success": false,
+  "data": null,
+  "meta": {},
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Mensagem"
+  }
+}
+```
 
-### 1. Detecção em Imagens
+## Rotas principais
 
-O sistema permite a análise de uma ou múltiplas imagens contendo
-componentes eletrônicos.
+- GET, POST /api/usuarios
+- GET, POST /api/placas
+- GET, POST /api/defeitos
+- GET, POST /api/relatorios
+- GET, POST /api/detection
+- GET /api/health
 
-**Entrada:** 
-- Uma ou mais imagens
+## Execucao com um comando
 
-**Saída:** 
-- Identificação dos defeitos presentes 
-- Recorte automático das regiões com defeito (com zoom) 
-- Classificação do tipo de defeito 
-- Navegação entre defeitos detectados
+Requisito: Docker + Docker Compose instalados.
 
-------------------------------------------------------------------------
+```bash
+docker compose up --build
+```
 
-### 2. Detecção em Vídeos
+Servicos disponiveis:
 
-O sistema realiza a detecção de defeitos a partir de vídeos.
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+- AI Service: http://localhost:5005
+- MySQL: localhost:3307
 
-**Funcionalidades:** 
-- Processamento contínuo de vídeo com detecção de
-defeitos 
-- Registro automático de data e hora de cada detecção 
-- Processamento em lote:
-    - Definição da quantidade de placas a serem analisadas
-    - Geração de relatório consolidado ao final do processamento
+## Observacoes de runtime
 
-------------------------------------------------------------------------
+- O backend executa migracoes e seed no startup do container.
+- O frontend consome backend por rewrite interna /backend-api, evitando CORS no browser.
+- O servico de IA continua operacional mesmo sem arquivo .pt; nesse caso retorna deteccoes vazias.
 
-### 3. Banco de Dados de Defeitos
+## Testes de integracao
 
-O sistema mantém um repositório estruturado de defeitos.
+Este projeto possui uma suite de testes de integracao de ponta a ponta com geracao automatica de relatorio.
 
-**Requisitos:** 
-- Armazenamento de tipos de defeitos por tipo de componente 
-- Associação dos defeitos às placas analisadas 
-- Geração de métricas: 
-  - Quantidade de ocorrências 
-  - Percentual em relação ao total de defeitos
+### Execucao local (com stack ja em execucao)
 
-------------------------------------------------------------------------
+```bash
+npm test
+```
 
-### 4. Controle de Usuários
+### Execucao em Docker (reprodutivel)
 
-#### Administrador
+```bash
+docker compose --profile test run --rm integration-tests
+```
 
--   Gerenciamento de usuários e permissões
--   Definição de acessos (visualização, edição e validação)
--   Marcação de detecções como falso positivo
+### Relatorio automatico
 
-#### Funcionário
+Ao final da execucao, o arquivo abaixo e atualizado automaticamente:
 
--   Visualização dos defeitos detectados
--   Interação com o sistema conforme permissões atribuídas
+- integration-report.md
 
-------------------------------------------------------------------------
+O relatorio inclui:
 
-### 5. Geração de Relatórios
-
-O sistema permite a criação de relatórios detalhados contendo:
-
--   Informações dos defeitos detectados
--   Origem da detecção (imagem, vídeo ou lote)
--   Data e hora das ocorrências
--   Quantidade e classificação dos defeitos
+- resumo dos pontos de integracao testados
+- status pass/fail por ponto
+- endpoints/fluxos com falha
+- analise de causa raiz
+- sugestoes de correcao
+- score geral de saude do sistema (0-100)

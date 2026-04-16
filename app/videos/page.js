@@ -1,12 +1,29 @@
 'use client'
+import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
+import { api } from '@/services/api'
+import { toast } from 'sonner'
 
 export default function FeedVideo() {
-  const logs = [
-    { id: '#V-01', tipo: 'Curto-circuito', tempo: '00:12' },
-    { id: '#V-02', tipo: 'Solda fria', tempo: '00:45' },
-    { id: '#V-03', tipo: 'Comp. ausente', tempo: '00:78' },
-  ]
+  const [logs, setLogs] = useState([])
+
+  useEffect(() => {
+    const loadLogs = async () => {
+      try {
+        const defeitos = await api.getDefeitos()
+        const mapped = defeitos.slice(0, 8).map((item, index) => ({
+          id: item.codigoInterno,
+          tipo: item.tipo,
+          tempo: String(index * 11).padStart(2, '0'),
+        }))
+        setLogs(mapped)
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+
+    loadLogs()
+  }, [])
 
   return (
     <AppShell breadcrumb="Análise / Vídeos / Lote_B047_Run01.mp4">
@@ -87,6 +104,11 @@ export default function FeedVideo() {
                   </div>
                 </div>
               ))}
+              {logs.length === 0 && (
+                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-md text-[10px] uppercase font-mono text-white/30">
+                  Sem eventos recentes no banco.
+                </div>
+              )}
             </div>
           </div>
         </div>
