@@ -53,6 +53,7 @@ async function main() {
     update: {},
     create: {
       codigo: 'PCB-A001-L1',
+      nomeClasse: 'PCB-A001-L1',
       descricao: 'Placa Mãe Linha A',
       localizacao: 'Setor 01 - Prateleira 01',
     },
@@ -63,6 +64,7 @@ async function main() {
     update: {},
     create: {
       codigo: 'PCB-B002-L2',
+      nomeClasse: 'PCB-B002-L2',
       descricao: 'Controladora Linha B',
       localizacao: 'Setor 02 - Prateleira 02',
     },
@@ -73,6 +75,7 @@ async function main() {
     update: {},
     create: {
       codigo: 'PCB-C003-L3',
+      nomeClasse: 'PCB-C003-L3',
       descricao: 'Power Supply Linha C',
       localizacao: 'Setor 03 - Prateleira 03',
     },
@@ -86,6 +89,9 @@ async function main() {
     update: {},
     create: {
       codigoInterno: 'DEF-0001',
+      idPlacaOrigem: placa1.id,
+      classe: 'rachadura',
+      nomeArquivoOrigem: 'seed-pcb-a001.png',
       tipo: 'rachadura',
       componente: 'Capacitor C10',
       origem: 'automatico',
@@ -102,6 +108,9 @@ async function main() {
     update: {},
     create: {
       codigoInterno: 'DEF-0002',
+      idPlacaOrigem: placa2.id,
+      classe: 'oxidacao',
+      nomeArquivoOrigem: 'seed-pcb-b002.png',
       tipo: 'oxidacao',
       componente: 'Trilha de cobre',
       origem: 'manual',

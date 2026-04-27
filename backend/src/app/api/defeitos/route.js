@@ -48,6 +48,8 @@ export async function POST(request) {
     const body = await readJson(request);
     const {
       placaId,
+      classe,
+      nome_arquivo_origem,
       tipo,
       componente,
       origem = 'manual',
@@ -57,15 +59,19 @@ export async function POST(request) {
       usuarioId,
     } = body || {};
 
-    if (!placaId || !tipo) {
-      return fail('placaId e tipo sao obrigatorios', 400, 'VALIDATION_ERROR');
+    const classeFinal = classe || tipo;
+    if (!placaId || !classeFinal) {
+      return fail('placaId e classe/tipo sao obrigatorios', 400, 'VALIDATION_ERROR');
     }
 
     const created = await prisma.defeito.create({
       data: {
         placaId,
-        tipo,
-        componente,
+        idPlacaOrigem: placaId,
+        classe: String(classeFinal),
+        nomeArquivoOrigem: nome_arquivo_origem || componente || 'upload-manual',
+        tipo: String(classeFinal),
+        componente: componente || nome_arquivo_origem || 'upload-manual',
         origem,
         severidade,
         descricao,

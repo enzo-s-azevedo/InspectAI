@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const JSZip = require('jszip');
 
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://localhost:3001/api';
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
@@ -32,6 +33,104 @@ function createTestPng() {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO9+XkQAAAAASUVORK5CYII=',
     'base64'
   );
+}
+
+function basenameFromAnyPath(filePath) {
+  if (!filePath) return null;
+  const normalized = String(filePath).replace(/\\/g, '/');
+  const parts = normalized.split('/').filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : null;
+}
+
+function fileExists(filePath) {
+  try {
+    return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function findRealImageFixture() {
+  const root = process.cwd();
+  const fixtures = [
+    path.join(root, 'yolo', 'TREINO', 'data', 'validation', 'images'),
+    path.join(root, 'yolo', 'TREINO', 'custom_data', 'images'),
+  ];
+
+  const priorityByJson = [];
+  const defectJsonPath = path.join(root, 'yolo', 'INTERFACE', 'defeitos_detectados.json');
+  if (fileExists(defectJsonPath)) {
+    try {
+      const payload = JSON.parse(fs.readFileSync(defectJsonPath, 'utf8'));
+      if (Array.isArray(payload)) {
+        for (const item of payload) {
+          const fileName = basenameFromAnyPath(item && item.imagem_origem);
+          if (fileName) priorityByJson.push(fileName);
+        }
+      }
+    } catch {
+      // Keep searching by directory scan when JSON cannot be parsed.
+    }
+  }
+
+  const searchExtensions = ['.jpg', '.jpeg', '.png'];
+
+  for (const directory of fixtures) {
+    if (!fs.existsSync(directory)) continue;
+
+    for (const preferred of priorityByJson) {
+      const preferredPath = path.join(directory, preferred);
+      if (fileExists(preferredPath)) {
+        const buffer = fs.readFileSync(preferredPath);
+        return {
+          filePath: preferredPath,
+          fileName: preferred,
+          buffer,
+          mimeType: preferred.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg',
+        };
+      }
+    }
+
+    const files = fs.readdirSync(directory);
+    const candidate = files.find((name) => searchExtensions.some((extension) => name.toLowerCase().endsWith(extension)));
+    if (candidate) {
+      const candidatePath = path.join(directory, candidate);
+      const buffer = fs.readFileSync(candidatePath);
+      return {
+        filePath: candidatePath,
+        fileName: candidate,
+        buffer,
+        mimeType: candidate.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg',
+      };
+    }
+  }
+
+  return null;
+}
+
+async function createZipWithImages(entries) {
+  const zip = new JSZip();
+  entries.forEach((entry, index) => {
+    const name = entry && entry.name ? entry.name : `fixture-${index + 1}.png`;
+    zip.file(name, entry.buffer);
+  });
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+async function sendDetectionUpload({ url, fileName, fileBuffer, mimeType, placaCodigo }) {
+  const formData = new FormData();
+  formData.append('image', new Blob([fileBuffer], { type: mimeType }), fileName);
+  if (placaCodigo) {
+    formData.append('placaCodigo', placaCodigo);
+  }
+
+  return request({
+    name: `detection-upload-${fileName}`,
+    method: 'POST',
+    url,
+    body: formData,
+    expectedStatus: 200,
+  });
 }
 
 function assert(condition, message) {
@@ -109,6 +208,32 @@ async function request({ name, method = 'GET', url, body, headers = {}, expected
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function waitForJsonHealth({ url, timeoutMs = 90000, intervalMs = 1500, validator = null }) {
+  const started = Date.now();
+  let lastError = null;
+
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        lastError = new Error(`Status ${res.status}`);
+      } else {
+        const payload = await res.json();
+        if (!validator || validator(payload)) {
+          return payload;
+        }
+        lastError = new Error(`Health payload invalid: ${JSON.stringify(payload).slice(0, 220)}`);
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error(`Health check timeout for ${url}: ${lastError ? lastError.message : 'unknown error'}`);
 }
 
 function tcpConnect(host, port, timeoutMs = REQUEST_TIMEOUT_MS) {
@@ -261,21 +386,54 @@ async function main() {
   const uniqueUserName = `Integration User ${runTag}`;
   const uniquePlacaCodigo = `INT-PLACA-${runTag}`;
   const uniqueRelatorioTitulo = `INT-REL-${runTag}`;
+  const detectionPlacaCodigo = `API-DET-${runTag}`;
+  const zipPlacaCodigo = `ZIP-DET-${runTag}`;
+  const frontendDetectionPlacaCodigo = `FRONT-DET-${runTag}`;
 
   const ctx = {
     userId: null,
     placaId: null,
     defeitoId: null,
     relatorioId: null,
+    detectionFixture: null,
+    zipFixtureName: `integration-batch-${runTag}.zip`,
+    zipDetectionCount: 0,
+    apiDetectionCount: 0,
   };
 
   const integrationSummary = [
     'Backend API contract and endpoint status for health, usuarios, placas, defeitos, relatorios',
     'Database integration through create/read flows spanning usuario -> placa -> defeito -> relatorio',
+    'Real YOLO inference using real PCB image fixtures from project dataset',
+    'Batch upload validation using .zip with real images and persistence checks',
     'Frontend availability and frontend proxy communication (/backend-api/*) with backend',
     'System-wide validation of frontend -> backend -> database behavior via proxied POST+GET',
     'Container communication checks between backend and AI service',
   ];
+
+  await runStep('Load real image fixture for inference', 'QA/Fixtures', async () => {
+    const fixture = findRealImageFixture();
+    assert(Boolean(fixture), 'Nenhuma imagem real encontrada em yolo/TREINO para testes de inferencia');
+    assert(fixture.buffer.length > 0, 'Imagem real selecionada esta vazia');
+    ctx.detectionFixture = fixture;
+    return `fixture=${fixture.fileName} size=${fixture.buffer.length} path=${fixture.filePath}`;
+  });
+
+  await runStep('Wait AI service readiness', 'Containers', async () => {
+    const payload = await waitForJsonHealth({
+      url: `${AI_BASE_URL}/health`,
+      validator: (value) => Boolean(value && (value.status === 'healthy' || value.status === 'degraded')),
+    });
+    return `aiStatus=${payload.status} model=${payload.model || 'none'}`;
+  });
+
+  await runStep('Wait backend with AI connectivity', 'Containers', async () => {
+    const payload = await waitForJsonHealth({
+      url: `${BACKEND_BASE_URL}/health`,
+      validator: (value) => Boolean(value && value.success === true && value.data && value.data.api === 'ok'),
+    });
+    return `backendApi=${payload.data.api} ai=${payload.data.ai?.status || 'unknown'}`;
+  });
 
   await runStep('Backend health endpoint contract', 'Backend/API', async () => {
     const res = await request({ name: 'backend-health', url: `${BACKEND_BASE_URL}/health` });
@@ -363,6 +521,7 @@ async function main() {
     assert(res.json.data && res.json.data.id, 'POST /placas must return id');
     assert(res.json.data && res.json.data.codigo === uniquePlacaCodigo, 'POST /placas should preserve codigo');
     ctx.placaId = res.json.data.id;
+    assert(typeof res.json.data.nome_classe === 'string', 'Placa deve expor campo nome_classe');
     return `placaId=${ctx.placaId}`;
   });
 
@@ -424,24 +583,111 @@ async function main() {
   });
 
   await runStep('Backend detection upload via API', 'Backend/API', async () => {
-    const imageBuffer = createTestPng();
-    const formData = new FormData();
-    formData.append('image', new Blob([imageBuffer], { type: 'image/png' }), 'integration.png');
-    formData.append('placaCodigo', `API-DET-${runTag}`);
+    assert(ctx.detectionFixture, 'Fixture de imagem real nao carregada');
 
-    const res = await request({
-      name: 'backend-detection-post',
-      method: 'POST',
+    const res = await sendDetectionUpload({
       url: `${BACKEND_BASE_URL}/detection`,
-      body: formData,
-      expectedStatus: 200,
+      fileName: ctx.detectionFixture.fileName,
+      fileBuffer: ctx.detectionFixture.buffer,
+      mimeType: ctx.detectionFixture.mimeType,
+      placaCodigo: detectionPlacaCodigo,
     });
 
     validateContract(res.json, 'POST /api/detection');
     assert(res.json.success === true, 'POST /detection should return success=true');
     assert(res.json.data && Array.isArray(res.json.data.detections), 'Detection response must include detections array');
     assert(res.json.data && Array.isArray(res.json.data.savedDefeitos), 'Detection response must include savedDefeitos array');
+    assert(res.json.data.detections.length > 0, 'Inferencia em imagem real deve retornar ao menos 1 deteccao');
+    assert(
+      res.json.data.savedDefeitos.length === res.json.data.detections.length,
+      'Total de defeitos persistidos deve acompanhar total de deteccoes para imagem unica'
+    );
+    assert(res.json.meta && res.json.meta.totalFiles === 1, 'Upload de imagem unica deve processar exatamente 1 arquivo');
+    ctx.apiDetectionCount = Number(res.json.data.detections.length || 0);
     return `detections=${res.json.data.detections.length} saved=${res.json.data.savedDefeitos.length}`;
+  });
+
+  await runStep('AI service real image inference', 'AI/Inference', async () => {
+    assert(ctx.detectionFixture, 'Fixture de imagem real nao carregada');
+
+    const formData = new FormData();
+    formData.append(
+      'image',
+      new Blob([ctx.detectionFixture.buffer], { type: ctx.detectionFixture.mimeType }),
+      ctx.detectionFixture.fileName
+    );
+
+    const res = await request({
+      name: 'ai-predict-real-image',
+      method: 'POST',
+      url: `${AI_BASE_URL}/predict`,
+      body: formData,
+      expectedStatus: 200,
+    });
+
+    assert(Array.isArray(res.json), 'AI /predict deve retornar array de deteccoes');
+    assert(res.json.length > 0, 'IA deve detectar ao menos um defeito na imagem de fixture real');
+    return `fixture=${ctx.detectionFixture.fileName} detections=${res.json.length}`;
+  });
+
+  await runStep('Backend detection upload via ZIP', 'Backend/API', async () => {
+    assert(ctx.detectionFixture, 'Fixture de imagem real nao carregada');
+
+    const zipBuffer = await createZipWithImages([
+      { name: `zip-a-${ctx.detectionFixture.fileName}`, buffer: ctx.detectionFixture.buffer },
+      { name: `zip-b-${ctx.detectionFixture.fileName}`, buffer: ctx.detectionFixture.buffer },
+    ]);
+
+    const res = await sendDetectionUpload({
+      url: `${BACKEND_BASE_URL}/detection`,
+      fileName: ctx.zipFixtureName,
+      fileBuffer: zipBuffer,
+      mimeType: 'application/zip',
+      placaCodigo: zipPlacaCodigo,
+    });
+
+    validateContract(res.json, 'POST /api/detection (zip)');
+    assert(res.json.success === true, 'POST /detection zip should return success=true');
+    assert(res.json.meta && res.json.meta.inputType === 'zip', 'Meta inputType deve indicar zip');
+    assert(res.json.meta && res.json.meta.totalFiles === 2, 'ZIP de teste deve processar 2 imagens');
+    assert(Array.isArray(res.json.data.itens), 'Resposta ZIP deve incluir itens por arquivo');
+    assert(res.json.data.itens.length === 2, 'Resposta ZIP deve incluir os 2 arquivos processados');
+    assert(res.json.data.detections.length > 0, 'Inferencia em .zip real deve retornar deteccoes');
+    assert(
+      res.json.data.savedDefeitos.length === res.json.data.detections.length,
+      'Total de defeitos persistidos deve acompanhar total de deteccoes no zip'
+    );
+    ctx.zipDetectionCount = Number(res.json.data.detections.length || 0);
+    return `zipFiles=${res.json.meta.totalFiles} detections=${ctx.zipDetectionCount} saved=${res.json.data.savedDefeitos.length}`;
+  });
+
+  await runStep('Detection persistence integrity by placa', 'Backend/DB', async () => {
+    const apiDetectionRes = await request({
+      name: 'backend-defeitos-detection-filter',
+      url: `${BACKEND_BASE_URL}/defeitos?placaCodigo=${encodeURIComponent(detectionPlacaCodigo)}`,
+    });
+    validateContract(apiDetectionRes.json, 'GET /api/defeitos?placaCodigo API detection');
+    assert(Array.isArray(apiDetectionRes.json.data), 'Filtro de deteccao por placa deve retornar array');
+
+    const zipDetectionRes = await request({
+      name: 'backend-defeitos-zip-filter',
+      url: `${BACKEND_BASE_URL}/defeitos?placaCodigo=${encodeURIComponent(zipPlacaCodigo)}`,
+    });
+    validateContract(zipDetectionRes.json, 'GET /api/defeitos?placaCodigo ZIP detection');
+    assert(Array.isArray(zipDetectionRes.json.data), 'Filtro de deteccao zip por placa deve retornar array');
+
+    const combined = [...apiDetectionRes.json.data, ...zipDetectionRes.json.data];
+    combined.forEach((item) => {
+      assert(item.id, 'Defeito persistido precisa ter id');
+      assert(item.classe, 'Defeito persistido precisa ter classe');
+      assert(item.data_hora, 'Defeito persistido precisa ter data_hora');
+      assert(item.nome_arquivo_origem, 'Defeito persistido precisa ter nome_arquivo_origem');
+      assert(item.id_placa_origem, 'Defeito persistido precisa ter id_placa_origem');
+      assert(item.placa && item.placa.id, 'Defeito persistido precisa manter relacao com placa');
+      assert(item.id_placa_origem === item.placa.id, 'id_placa_origem deve ser igual ao id da placa relacionada');
+    });
+
+    return `apiByPlaca=${apiDetectionRes.json.data.length} zipByPlaca=${zipDetectionRes.json.data.length} apiDetections=${ctx.apiDetectionCount} zipDetections=${ctx.zipDetectionCount}`;
   });
 
   await runStep('Backend read created defeito by placaCodigo filter', 'Backend/DB', async () => {
@@ -539,17 +785,14 @@ async function main() {
   });
 
   await runStep('Frontend proxy detection upload', 'Frontend/Backend', async () => {
-    const imageBuffer = createTestPng();
-    const formData = new FormData();
-    formData.append('image', new Blob([imageBuffer], { type: 'image/png' }), 'frontend-integration.png');
-    formData.append('placaCodigo', `FRONT-DET-${runTag}`);
+    assert(ctx.detectionFixture, 'Fixture de imagem real nao carregada');
 
-    const res = await request({
-      name: 'frontend-proxy-detection-post',
-      method: 'POST',
+    const res = await sendDetectionUpload({
       url: `${FRONTEND_API_BASE_URL}/detection`,
-      body: formData,
-      expectedStatus: 200,
+      fileName: ctx.detectionFixture.fileName,
+      fileBuffer: ctx.detectionFixture.buffer,
+      mimeType: ctx.detectionFixture.mimeType,
+      placaCodigo: frontendDetectionPlacaCodigo,
     });
 
     validateContract(res.json, 'POST /backend-api/detection');

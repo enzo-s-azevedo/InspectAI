@@ -19,6 +19,7 @@ export function serializePlaca(placa) {
   return {
     id: placa.id,
     codigo: placa.codigo,
+    nome_classe: placa.nomeClasse,
     descricao: placa.descricao,
     localizacao: placa.localizacao,
     criado: placa.criado,
@@ -40,6 +41,10 @@ export function serializeDefeito(defeito) {
 
   return {
     id: defeito.id,
+    classe: defeito.classe,
+    data_hora: defeito.dataHora,
+    nome_arquivo_origem: defeito.nomeArquivoOrigem,
+    id_placa_origem: defeito.idPlacaOrigem || defeito.placaId,
     codigoInterno: defeito.codigoInterno,
     tipo: defeito.tipo,
     componente: defeito.componente,

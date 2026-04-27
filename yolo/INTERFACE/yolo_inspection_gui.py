@@ -507,7 +507,7 @@ def initialize_model() -> None:
     if not known_classes:
         known_classes = YoloInferenceService.load_class_names_from_data_yaml(data_yaml_file)
 
-    default_defect_labels = YoloInferenceService.infer_default_defect_labels(known_classes)
+    default_defect_labels = set(known_classes)
     model_path = YoloInferenceService.find_latest_model(workspace)
 
     default_error_labels = sorted(default_defect_labels)

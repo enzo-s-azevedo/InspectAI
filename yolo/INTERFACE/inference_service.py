@@ -101,28 +101,7 @@ class YoloInferenceService:
 
     @staticmethod
     def infer_default_defect_labels(labels: set[str]) -> set[str]:
-        if not labels:
-            return set()
-
-        plus_labels = {label for label in labels if label.endswith("+")}
-        if plus_labels:
-            non_plus = {label for label in labels if not label.endswith("+")}
-            if non_plus:
-                return non_plus
-
-        keyword_labels = {
-            label
-            for label in labels
-            if any(token in label.casefold() for token in ["falt", "curto", "defeito", "erro", "falha", "missing", "short"])
-        }
-        if keyword_labels:
-            return keyword_labels
-
-        minus_labels = {label for label in labels if label.endswith("-")}
-        if minus_labels:
-            return minus_labels
-
-        return set()
+        return set(labels)
 
     def _is_defect_detection(
         self,
@@ -141,12 +120,9 @@ class YoloInferenceService:
 
         reference_classes = self.known_classes or self.get_model_labels()
         if reference_classes:
-            inferred = self.infer_default_defect_labels(reference_classes)
-            if inferred:
-                return normalized_label in inferred
-            return normalized_label in reference_classes and normalized_label.endswith("-")
+            return normalized_label in reference_classes
 
-        return False
+        return True
 
     def predict_defects(
         self,
@@ -187,42 +163,78 @@ import numpy as np
 
 app = Flask(__name__)
 
-# Instancia a classe que você já tem
-# Ele vai procurar automaticamente o modelo .pt na pasta
 base_path = Path(__file__).parent
 model_file = None
 service = None
+startup_error = None
+
+
+def build_error(message: str, code: str) -> dict[str, str]:
+    return {"code": code, "message": message}
+
+
+def initialize_service() -> tuple[Path | None, YoloInferenceService | None, str | None]:
+    explicit_model = base_path / "best.pt"
+
+    if explicit_model.exists() and explicit_model.is_file():
+        try:
+            return explicit_model, YoloInferenceService(explicit_model), None
+        except Exception as exc:  # pragma: no cover - startup guard
+            return None, None, f"Falha ao carregar best.pt: {exc}"
+
+    try:
+        fallback_model = YoloInferenceService.find_latest_model(base_path)
+        return fallback_model, YoloInferenceService(fallback_model), "Modelo best.pt nao encontrado; usando fallback"
+    except Exception as exc:
+        return None, None, f"Modelo indisponivel: {exc}"
+
+
+def decode_uploaded_image(raw_bytes: bytes):
+    if not raw_bytes:
+        raise ValueError("Arquivo de imagem vazio")
+
+    np_img = np.frombuffer(raw_bytes, np.uint8)
+    image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError("Imagem invalida ou corrompida")
+
+    return image
 
 try:
-    model_file = YoloInferenceService.find_latest_model(base_path)
-    service = YoloInferenceService(model_file)
-except FileNotFoundError:
-    service = None
+    model_file, service, startup_error = initialize_service()
+except Exception as exc:  # pragma: no cover - defensive startup
+    startup_error = str(exc)
+    model_file, service = None, None
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
-        return jsonify({"error": "Nenhuma imagem enviada"}), 400
+        return jsonify({"error": build_error("Nenhuma imagem enviada", "INVALID_INPUT")}), 400
 
     if service is None:
-        return jsonify([])
-    
-    # Converte a imagem recebida para o formato que o OpenCV entende
-    file = request.files['image'].read()
-    np_img = np.frombuffer(file, np.uint8)
-    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+        return jsonify({"error": build_error("Modelo de IA indisponivel", "MODEL_UNAVAILABLE")}), 503
 
-    # Roda a inferência (usando a sua classe)
-    # Aqui passamos sets vazios para usar os labels padrão da classe
-    detections = service.predict_defects(img, set(), set())
-    
-    return jsonify(detections)
+    try:
+        image_file = request.files['image']
+        image = decode_uploaded_image(image_file.read())
+        detections = service.predict_defects(image, set(), set())
+        return jsonify(detections)
+    except ValueError as exc:
+        return jsonify({"error": build_error(str(exc), "INVALID_IMAGE")}), 400
+    except Exception as exc:  # pragma: no cover - inference guard
+        app.logger.exception("Erro de inferencia")
+        return jsonify({"error": build_error(f"Falha na inferencia: {exc}", "INFERENCE_ERROR")}), 500
 
 @app.route('/health', methods=['GET'])
 def health():
-    if model_file is None:
-        return jsonify({"status": "IA Online sem modelo", "model": None}), 200
-    return jsonify({"status": "IA Online", "model": str(model_file.name)}), 200
+    return jsonify(
+        {
+            "status": "healthy" if service is not None else "degraded",
+            "model": str(model_file.name) if model_file else None,
+            "model_loaded": service is not None,
+            "error": startup_error,
+        }
+    ), 200
 
 if __name__ == '__main__':
     # '0.0.0.0' permite que o Docker receba conexões externas

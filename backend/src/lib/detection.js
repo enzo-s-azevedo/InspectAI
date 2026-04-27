@@ -13,6 +13,7 @@ async function getOrCreateDefaultPlaca() {
     update: {},
     create: {
       codigo,
+      nomeClasse: codigo,
       descricao: 'Placa criada automaticamente para ingestao de deteccoes',
       localizacao: 'Pipeline IA',
     },
@@ -32,6 +33,7 @@ export async function resolvePlaca({ placaId, placaCodigo }) {
     return prisma.placa.create({
       data: {
         codigo: placaCodigo,
+        nomeClasse: placaCodigo,
         descricao: 'Placa criada automaticamente a partir da deteccao',
         localizacao: 'Pipeline IA',
       },
@@ -57,6 +59,9 @@ export async function persistDetections({ detections, placa, imageName }) {
       data: {
         codigoInterno: buildDefectCode(),
         placaId: placa.id,
+        idPlacaOrigem: placa.id,
+        classe: tipo,
+        nomeArquivoOrigem: imageName || 'upload.jpg',
         tipo,
         componente: imageName || 'imagem',
         origem: 'automatico',

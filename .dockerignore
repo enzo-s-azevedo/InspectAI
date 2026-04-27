@@ -6,4 +6,7 @@ out
 build
 backend
 yolo
+!yolo/
+!yolo/INTERFACE/
+!yolo/INTERFACE/data.yaml
 *.log
