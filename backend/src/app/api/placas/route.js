@@ -42,14 +42,19 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await readJson(request);
-    const { codigo, descricao, localizacao } = body || {};
+    const { codigo, nome_classe, nomeClasse, descricao, localizacao } = body || {};
 
     if (!codigo) {
       return fail('Codigo da placa e obrigatorio', 400, 'VALIDATION_ERROR');
     }
 
     const novaPlaca = await prisma.placa.create({
-      data: { codigo, descricao, localizacao },
+      data: {
+        codigo,
+        nomeClasse: nome_classe || nomeClasse || codigo,
+        descricao,
+        localizacao,
+      },
     });
 
     return ok(serializePlaca(novaPlaca), { created: true }, { status: 201 });

@@ -33,6 +33,7 @@ model Usuario {
 model Placa {
   id          String   @id @default(cuid())
   codigo      String   @unique // PCB-AALLL-LX
+  nomeClasse  String   @default("desconhecida") @map("nome_classe")
   descricao   String?
   localizacao String?
   criado      DateTime @default(now())
@@ -50,8 +51,12 @@ model Defeito {
   id          String   @id @default(cuid())
   codigoInterno String  @unique @default(cuid()) // #DEF-XXXX
   placaId     String
+  idPlacaOrigem String? @map("id_placa_origem")
   placa       Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
   
+  classe      String   @default("defeito-nao-classificado")
+  dataHora    DateTime @default(now()) @map("data_hora")
+  nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
   tipo        String   // rachadura, oxidacao, solda-fria, etc
   componente  String?  // descrição do componente afetado
   origem      String   // manual, automatico, importado
@@ -72,6 +77,7 @@ model Defeito {
   relatorios  RelatorioDefeito[]
 
   @@index([placaId])
+  @@index([idPlacaOrigem])
   @@index([usuarioId])
   @@index([status])
   @@index([criado])

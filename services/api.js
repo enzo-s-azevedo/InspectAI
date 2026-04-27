@@ -71,10 +71,13 @@ export const api = {
     const payload = await request('/relatorios');
     return payload.data;
   },
-  analisarImagem: async ({ imageFile, placaCodigo }) => {
+  analisarImagem: async ({ imageFile, placaCodigo, classes }) => {
     const formData = new FormData();
     formData.append('image', imageFile);
     if (placaCodigo) formData.append('placaCodigo', placaCodigo);
+    if (Array.isArray(classes) && classes.length > 0) {
+      formData.append('classes', JSON.stringify(classes));
+    }
 
     const payload = await request('/detection', {
       method: 'POST',
