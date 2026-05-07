@@ -1,88 +1,112 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/backend-api';
+// BASE URL aponta para o proxy do frontend Docker
+// Em desenvolvimento local sem Docker: http://localhost:3001/api
+const BASE_URL = '/backend-api'
 
-async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(options.headers || {}),
-    },
-    cache: 'no-store',
-  });
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  const contentType = response.headers.get('content-type') || '';
-  const rawBody = await response.text();
-
-  let payload = null;
-  if (rawBody && contentType.includes('application/json')) {
-    try {
-      payload = JSON.parse(rawBody);
-    } catch {
-      payload = null;
-    }
+async function request(path) {
+  const res = await fetch(`${BASE_URL}${path}`)
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error.message || `Erro ${res.status}`)
   }
-
-  if (!response.ok || !payload?.success) {
-    const errorMessage =
-      payload?.error?.message ||
-      (rawBody && !contentType.includes('application/json')
-        ? `Resposta invalida da API (${response.status}): esperado JSON e recebido ${contentType || 'desconhecido'}`
-        : `Erro inesperado na API (${response.status})`);
-    throw new Error(errorMessage);
-  }
-
-  return payload;
+  const json = await res.json()
+  // O backend retorna { success, data, meta, error }
+  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  return json.data
 }
 
-export const api = {
-  getHealth: async () => {
-    const payload = await request('/health');
-    return payload.data;
-  },
-  getDefeitos: async (filters = {}) => {
-    const query = new URLSearchParams(filters).toString();
-    const payload = await request(`/defeitos${query ? `?${query}` : ''}`);
-    return payload.data;
-  },
-  createDefeito: async (body) => {
-    const payload = await request('/defeitos', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    return payload.data;
-  },
-  getUsuarios: async (filters = {}) => {
-    const query = new URLSearchParams(filters).toString();
-    const payload = await request(`/usuarios${query ? `?${query}` : ''}`);
-    return payload.data;
-  },
-  createUsuario: async (body) => {
-    const payload = await request('/usuarios', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    return payload.data;
-  },
-  getPlacas: async () => {
-    const payload = await request('/placas');
-    return payload.data;
-  },
-  getRelatorios: async () => {
-    const payload = await request('/relatorios');
-    return payload.data;
-  },
-  analisarImagem: async ({ imageFile, placaCodigo, classes }) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    if (placaCodigo) formData.append('placaCodigo', placaCodigo);
-    if (Array.isArray(classes) && classes.length > 0) {
-      formData.append('classes', JSON.stringify(classes));
-    }
+async function requestBody(method, path, body) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error.message || `Erro ${res.status}`)
+  }
+  const json = await res.json()
+  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  return json.data
+}
 
-    const payload = await request('/detection', {
-      method: 'POST',
-      body: formData,
-    });
-    return payload.data;
+async function requestForm(path, formData) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}))
+    throw new Error(error.message || `Erro ${res.status}`)
+  }
+  const json = await res.json()
+  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  return json.data
+}
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+
+export const api = {
+
+  // Health
+  getHealth: () =>
+    request('/health'),
+
+  // Dashboard (usa os endpoints existentes para montar as métricas)
+  getDashboard: async () => {
+    const [defeitos, placas, usuarios] = await Promise.all([
+      request('/defeitos'),
+      request('/placas'),
+      request('/usuarios'),
+    ])
+    return { defeitos, placas, usuarios }
   },
-};
+
+  // Placas
+  getPlacas: () =>
+    request('/placas'),
+
+  getPlaca: (id) =>
+    request(`/placas/${id}`),
+
+  criarPlaca: (body) =>
+    requestBody('POST', '/placas', body),
+
+  editarPlaca: (id, body) =>
+    requestBody('PUT', `/placas/${id}`, body),
+
+  deletarPlaca: (id) =>
+    requestBody('DELETE', `/placas/${id}`),
+
+  // Defeitos
+  getDefeitos: (params) =>
+    request(`/defeitos${params ? `?${new URLSearchParams(params)}` : ''}`),
+
+  criarDefeito: (body) =>
+    requestBody('POST', '/defeitos', body),
+
+  // Detecção por imagem (IA)
+  analisarImagem: (formData) =>
+    requestForm('/detection', formData),
+
+  // Relatórios
+  getRelatorios: () =>
+    request('/relatorios'),
+
+  criarRelatorio: (body) =>
+    requestBody('POST', '/relatorios', body),
+
+  // Usuários
+  getUsuarios: () =>
+    request('/usuarios'),
+
+  criarUsuario: (body) =>
+    requestBody('POST', '/usuarios', body),
+
+  editarUsuario: (id, body) =>
+    requestBody('PUT', `/usuarios/${id}`, body),
+
+  deletarUsuario: (id) =>
+    requestBody('DELETE', `/usuarios/${id}`),
+}

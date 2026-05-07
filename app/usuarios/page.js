@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import AppShell from '@/components/AppShell'
 import Badge from '@/components/Badge'
 import { api } from '@/services/api'
@@ -14,67 +14,74 @@ const permissions = [
   { key: 'usuarios',   label: 'Gerenciar usuários'  },
 ]
 
+function getStatusVariant(status) {
+  return status === 'ativo' ? 'success' : 'neutral'
+}
+
+function getStatusLabel(status) {
+  return status === 'ativo' ? 'Ativo' : 'Inativo'
+}
+
+function getAvatar(nome) {
+  return nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'
+}
+
 export default function UsuariosPage() {
   const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ nome: '', email: '', papel: 'funcionario' })
 
-  const userCountLabel = useMemo(() => `${users.length} usuários cadastrados`, [users.length])
+  useEffect(() => {
+    loadUsers()
+  }, [])
 
-  const loadUsuarios = async () => {
+  async function loadUsers() {
+    setIsLoading(true)
+    setError(null)
     try {
-      setIsLoading(true)
       const data = await api.getUsuarios()
       setUsers(data)
-    } catch (error) {
-      toast.error(error.message)
+    } catch (err) {
+      setError(err.message)
     } finally {
       setIsLoading(false)
     }
   }
 
-  useEffect(() => {
-    loadUsuarios()
-  }, [])
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  async function handleCreate() {
     try {
-      await api.createUsuario(form)
-      toast.success('Usuário criado com sucesso')
-      setForm({ nome: '', email: '', papel: 'funcionario' })
+      await api.criarUsuario(form)
+      toast.success('Usuário criado com sucesso!')
       setShowForm(false)
-      await loadUsuarios()
-    } catch (error) {
-      toast.error(error.message)
+      setForm({ nome: '', email: '', papel: 'funcionario' })
+      loadUsers()
+    } catch (err) {
+      toast.error(`Erro: ${err.message}`)
     }
   }
 
-  const mapStatus = (status) => {
-    if (status === 'ativo') return { variant: 'success', label: 'Ativo' }
-    if (status === 'inativo') return { variant: 'neutral', label: 'Inativo' }
-    return { variant: 'warning', label: status }
+  async function handleDelete(id, nome) {
+    try {
+      await api.deletarUsuario(id)
+      toast.success(`Usuário ${nome} removido.`)
+      loadUsers()
+    } catch (err) {
+      toast.error(`Erro: ${err.message}`)
+    }
   }
-
-  const initials = (nome) =>
-    String(nome || '')
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((item) => item[0])
-      .join('')
-      .toUpperCase()
 
   return (
     <AppShell breadcrumb="/ Usuários">
       <div className="p-6 flex flex-col gap-5">
 
-        {/* Header */}
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-semibold">Usuários</h1>
-            <p className="font-mono text-2xs text-text-muted mt-1">// {userCountLabel}</p>
+            <p className="font-mono text-2xs text-text-muted mt-1">
+              // {isLoading ? 'Carregando...' : `${users.length} usuários cadastrados`}
+            </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -85,16 +92,15 @@ export default function UsuariosPage() {
           </button>
         </div>
 
-        {/* New user form */}
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-bg-card border border-amber/30 rounded-xl p-5">
+          <div className="bg-bg-card border border-amber/30 rounded-xl p-5">
             <h2 className="font-mono text-xs text-text-secondary uppercase tracking-label mb-4">Cadastrar Usuário</h2>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Nome completo</label>
                 <input
                   value={form.nome}
-                  onChange={(event) => setForm((previous) => ({ ...previous, nome: event.target.value }))}
+                  onChange={e => setForm({ ...form, nome: e.target.value })}
                   placeholder="Ex: João da Silva"
                   className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
                 />
@@ -104,7 +110,7 @@ export default function UsuariosPage() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(event) => setForm((previous) => ({ ...previous, email: event.target.value }))}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
                   placeholder="joao@inspect.ai"
                   className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
                 />
@@ -113,7 +119,7 @@ export default function UsuariosPage() {
                 <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Papel</label>
                 <select
                   value={form.papel}
-                  onChange={(event) => setForm((previous) => ({ ...previous, papel: event.target.value }))}
+                  onChange={e => setForm({ ...form, papel: e.target.value })}
                   className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber transition-all duration-fast"
                 >
                   <option value="funcionario">Funcionário</option>
@@ -122,29 +128,17 @@ export default function UsuariosPage() {
                 </select>
               </div>
             </div>
-            <div className="mb-4">
-              <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-2">Permissões</label>
-              <div className="flex flex-wrap gap-2">
-                {permissions.map(p => (
-                  <label key={p.key} className="flex items-center gap-1.5 bg-bg-elevated border border-border rounded-md px-3 py-1.5 cursor-pointer hover:border-amber transition-all duration-fast">
-                    <input type="checkbox" className="accent-amber" />
-                    <span className="font-mono text-xs text-text-secondary">{p.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
             <div className="flex gap-2">
-              <button type="submit" className="px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer">
+              <button onClick={handleCreate} className="px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer">
                 Salvar
               </button>
-              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-border text-text-secondary rounded-md font-mono text-xs hover:bg-bg-elevated transition-all duration-fast cursor-pointer">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-border text-text-secondary rounded-md font-mono text-xs hover:bg-bg-elevated transition-all duration-fast cursor-pointer">
                 Cancelar
               </button>
             </div>
-          </form>
+          </div>
         )}
 
-        {/* Users table */}
         <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
@@ -155,36 +149,38 @@ export default function UsuariosPage() {
               </tr>
             </thead>
             <tbody>
-              {!isLoading && users.map(u => {
-                const status = mapStatus(u.status)
-                return (
-                <tr key={u.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center font-mono text-xs font-semibold text-amber flex-shrink-0">
-                        {u.avatar || initials(u.nome)}
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/30 last:border-0">
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3"><div className="h-3 w-20 bg-bg-elevated animate-pulse rounded"></div></td>
+                    ))}
+                  </tr>
+                ))
+              ) : error ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
+              ) : (
+                users.map(u => (
+                  <tr key={u.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center font-mono text-xs font-semibold text-amber flex-shrink-0">
+                          {getAvatar(u.nome)}
+                        </div>
+                        <span className="text-xs font-medium text-text-primary">{u.nome}</span>
                       </div>
-                      <span className="text-xs font-medium text-text-primary">{u.nome}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-secondary">{u.email}</td>
-                  <td className="px-4 py-3 text-xs text-text-secondary">{u.papel}</td>
-                  <td className="px-4 py-3"><Badge variant={status.variant}>{status.label}</Badge></td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-muted">{new Date(u.criado).toLocaleDateString('pt-BR')}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-3">
-                      <button className="font-mono text-2xs text-amber hover:underline cursor-pointer">Editar</button>
-                      <button className="font-mono text-2xs text-critical-text hover:underline cursor-pointer">Remover</button>
-                    </div>
-                  </td>
-                </tr>
-              )})}
-              {isLoading && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-text-muted text-xs font-mono uppercase">
-                    Carregando usuarios...
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-text-secondary">{u.email}</td>
+                    <td className="px-4 py-3 text-xs text-text-secondary capitalize">{u.papel}</td>
+                    <td className="px-4 py-3"><Badge variant={getStatusVariant(u.status)}>{getStatusLabel(u.status)}</Badge></td>
+                    <td className="px-4 py-3 font-mono text-xs text-text-muted">{new Date(u.criado).toLocaleDateString('pt-BR')}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-3">
+                        <button onClick={() => handleDelete(u.id, u.nome)} className="font-mono text-2xs text-critical-text hover:underline cursor-pointer">Remover</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

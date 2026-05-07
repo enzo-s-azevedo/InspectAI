@@ -1,72 +1,205 @@
 'use client'
-import { useEffect, useState } from 'react'
+
+import { useState, useEffect } from 'react'
 import AppShell from '@/components/AppShell'
+import Badge from '@/components/Badge'
 import { api } from '@/services/api'
 import { toast } from 'sonner'
 
+function getStatusVariant(status) {
+  if (status === 'finalizado') return 'success'
+  if (status === 'rascunho') return 'neutral'
+  if (status === 'arquivado') return 'info'
+  return 'neutral'
+}
+
+function getStatusLabel(status) {
+  const map = { finalizado: 'Finalizado', rascunho: 'Rascunho', arquivado: 'Arquivado' }
+  return map[status] || status
+}
+
 export default function RelatoriosPage() {
-  const [relatorios, setRelatorios] = useState([])
+  const [reports, setReports] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [generating, setGenerating] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editingTitulo, setEditingTitulo] = useState('')
+  
+  // Ajuste: Adicionado 'descricao' e mudado 'origem' padrão para 'inspecao'
+  const [form, setForm] = useState({ 
+    titulo: '', 
+    descricao: '', 
+    origem: 'inspecao' 
+  })
 
   useEffect(() => {
-    const loadRelatorios = async () => {
-      try {
-        setIsLoading(true)
-        const data = await api.getRelatorios()
-        setRelatorios(data)
-      } catch (error) {
-        toast.error(error.message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadRelatorios()
+    loadReports()
   }, [])
 
-  const humanStatus = (status) => {
-    if (status === 'finalizado') return 'Concluido'
-    if (status === 'rascunho') return 'Rascunho'
-    return status
+  async function loadReports() {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await api.getRelatorios()
+      setReports(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleCreate() {
+    // Validação simples antes de enviar
+    if (!form.titulo || !form.descricao) {
+      toast.error('Preencha o título e a descrição')
+      return
+    }
+
+    try {
+      await api.criarRelatorio(form)
+      toast.success('Relatório criado com sucesso!')
+      setGenerating(false)
+      // Reseta o formulário para os padrões corretos
+      setForm({ titulo: '', descricao: '', origem: 'inspecao' })
+      loadReports()
+    } catch (err) {
+      toast.error(`Erro: ${err.message}`)
+    }
+  }
+
+  function handleStartEdit(r) {
+    setEditingId(r.id)
+    setEditingTitulo(r.titulo)
+  }
+
+  function handleSaveEdit(id) {
+    setReports(prev => prev.map(r => r.id === id ? { ...r, titulo: editingTitulo } : r))
+    setEditingId(null)
+    toast.success('Título atualizado!')
+  }
+
+  function handleDelete(id) {
+    setReports(prev => prev.filter(r => r.id !== id))
+    toast.success('Relatório excluído.')
   }
 
   return (
-    <AppShell breadcrumb="Controle / Relatórios">
-      <div className="p-8 space-y-6">
-        <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-black text-white uppercase italic">Repositório de Dados</h2>
-            <button className="px-6 py-2 bg-white text-black font-mono text-[10px] font-black uppercase rounded hover:bg-fuchsia-500 hover:text-white transition-all">Novo Relatório</button>
+    <AppShell breadcrumb="/ Relatórios">
+      <div className="p-6 flex flex-col gap-5">
+
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Relatórios</h1>
+            <p className="font-mono text-2xs text-text-muted mt-1">
+              // {isLoading ? 'Carregando...' : `${reports.length} relatórios`}
+            </p>
+          </div>
+          <button
+            onClick={() => setGenerating(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer"
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+            Novo Relatório
+          </button>
         </div>
 
-        <div className="grid gap-3">
-          {!isLoading && relatorios.map((rel) => (
-            <div key={rel.id} className="bg-white/[0.02] border border-white/5 p-4 rounded-xl flex items-center justify-between hover:border-white/10 transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white/40">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                </div>
-                <div>
-                  <p className="text-[11px] font-black text-white uppercase tracking-tight">{rel.titulo}</p>
-                  <p className="text-[9px] text-white/20 font-mono uppercase tracking-widest">
-                    {new Date(rel.criado).toLocaleDateString('pt-BR')} · {humanStatus(rel.status)}
-                  </p>
-                </div>
+        {generating && (
+          <div className="bg-bg-card border border-amber/30 rounded-xl p-5 shadow-lg">
+            <h2 className="font-mono text-xs text-text-secondary uppercase tracking-label mb-4">Configurar Relatório</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Título</label>
+                <input
+                  value={form.titulo}
+                  onChange={e => setForm({ ...form, titulo: e.target.value })}
+                  placeholder="Ex: Inspeção Lote B-047"
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
+                />
               </div>
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button title="Editar" className="p-2 hover:text-fuchsia-500 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                </button>
-                <button title="Excluir" className="p-2 hover:text-red-500 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
+
+              {/* NOVO CAMPO: Descrição */}
+              <div>
+                <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Descrição</label>
+                <input
+                  value={form.descricao}
+                  onChange={e => setForm({ ...form, descricao: e.target.value })}
+                  placeholder="Ex: Análise de qualidade de abril"
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber placeholder:text-text-muted transition-all duration-fast"
+                />
+              </div>
+
+              <div>
+                <label className="font-mono text-2xs text-text-muted uppercase tracking-label block mb-1.5">Origem</label>
+                <select
+                  value={form.origem}
+                  onChange={e => setForm({ ...form, origem: e.target.value })}
+                  className="w-full bg-bg-elevated border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 outline-none focus:border-amber transition-all duration-fast cursor-pointer"
+                >
+                  <option value="inspecao">Inspeção</option>
+                  <option value="manual">Manual</option>
+                </select>
               </div>
             </div>
-          ))}
-          {isLoading && (
-            <div className="bg-white/[0.02] border border-white/5 p-6 rounded-xl text-center text-[10px] uppercase font-mono text-white/30">
-              Carregando relatorios...
+            <div className="flex gap-2">
+              <button onClick={handleCreate} className="px-4 py-2 bg-amber text-black rounded-md font-mono text-xs font-semibold hover:bg-amber-600 transition-all duration-fast cursor-pointer">Gerar</button>
+              <button onClick={() => setGenerating(false)} className="px-4 py-2 border border-border text-text-secondary rounded-md font-mono text-xs hover:bg-bg-elevated transition-all duration-fast cursor-pointer">Cancelar</button>
             </div>
-          )}
+          </div>
+        )}
+
+        <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-4 py-3.5 border-b border-border/50">
+            <span className="font-mono text-xs text-text-secondary uppercase tracking-label">Histórico</span>
+          </div>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border/50">
+                {['Código', 'Título', 'Origem', 'Status', 'Data/Hora', 'Ações'].map(h => (
+                  <th key={h} className="font-mono text-2xs text-text-muted uppercase tracking-label px-3 py-3 text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border/30 last:border-0">
+                    {Array.from({ length: 6 }).map((_, j) => (
+                      <td key={j} className="px-3 py-3"><div className="h-3 w-20 bg-bg-elevated animate-pulse rounded"></div></td>
+                    ))}
+                  </tr>
+                ))
+              ) : error ? (
+                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro: {error}</td></tr>
+              ) : reports.map(r => (
+                <tr key={r.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
+                  <td className="px-3 py-3 font-mono text-xs text-amber">{r.codigoInterno}</td>
+                  <td className="px-3 py-3 text-xs text-text-primary font-medium">
+                    {editingId === r.id ? (
+                      <input value={editingTitulo} onChange={e => setEditingTitulo(e.target.value)} className="bg-bg-elevated border border-amber text-text-primary font-sans text-xs rounded px-2 py-1 outline-none w-full" autoFocus />
+                    ) : r.titulo}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-text-secondary capitalize">{r.origem}</td>
+                  <td className="px-3 py-3"><Badge variant={getStatusVariant(r.status)}>{getStatusLabel(r.status)}</Badge></td>
+                  <td className="px-3 py-3 font-mono text-xs text-text-muted">{new Date(r.criado).toLocaleString('pt-BR')}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex gap-3 items-center">
+                      {editingId === r.id ? (
+                        <button onClick={() => handleSaveEdit(r.id)} className="font-mono text-2xs text-success-text hover:underline cursor-pointer">Salvar</button>
+                      ) : (
+                        <button onClick={() => handleStartEdit(r)} className="font-mono text-2xs text-text-secondary hover:underline cursor-pointer">Editar</button>
+                      )}
+                      <button onClick={() => handleDelete(r.id)} className="font-mono text-2xs text-critical-text hover:underline cursor-pointer">Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!isLoading && !error && reports.length === 0 && (
+                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum relatório encontrado.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </AppShell>
