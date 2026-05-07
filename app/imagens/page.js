@@ -28,7 +28,7 @@ export default function InspecaoImagens() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [detections, setDetections] = useState([])
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [statusText, setStatusText] = useState('Aguardando imagem')
+  const [statusText, setStatusText] = useState('Aguardando imagem ou lote')
   const [errorText, setErrorText] = useState('')
   const [availableClasses, setAvailableClasses] = useState([])
   const [selectedClasses, setSelectedClasses] = useState([])
@@ -42,6 +42,8 @@ export default function InspecaoImagens() {
 
   const selectedImageUrl = useMemo(() => {
     if (!imageFile) return null
+    // Evita tentar processar o ZIP como se fosse uma imagem
+    if (imageFile.name.endsWith('.zip') || imageFile.type === 'application/zip') return null
     return URL.createObjectURL(imageFile)
   }, [imageFile])
 
@@ -223,8 +225,11 @@ export default function InspecaoImagens() {
     const file = event.target.files?.[0] || null
     if (!file) return
 
-    if (!String(file.type || '').startsWith('image/')) {
-      toast.error('Selecione apenas uma imagem (.jpg, .jpeg, .png)')
+    const isImage = String(file.type || '').startsWith('image/')
+    const isZip = file.type === 'application/zip' || file.type === 'application/x-zip-compressed' || file.name.endsWith('.zip')
+
+    if (!isImage && !isZip) {
+      toast.error('Selecione uma imagem (.jpg, .png) ou um lote (.zip)')
       event.target.value = ''
       return
     }
@@ -232,8 +237,20 @@ export default function InspecaoImagens() {
     setImageFile(file)
     setDetections([])
     setSelectedIndex(0)
-    setStatusText('Aguardando imagem')
+    setStatusText(isZip ? 'Lote ZIP selecionado' : 'Aguardando imagem')
     setErrorText('')
+  }
+
+  const clearImage = () => {
+    setImageFile(null)
+    setDetections([])
+    setSelectedIndex(0)
+    setStatusText('Aguardando imagem ou lote')
+    setErrorText('')
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const toggleClass = (item) => {
@@ -263,14 +280,14 @@ export default function InspecaoImagens() {
 
   const runDetection = async () => {
     if (!imageFile) {
-      toast.error('Selecione uma imagem antes de analisar')
+      toast.error('Selecione uma imagem ou lote antes de analisar')
       return
     }
 
-    const classes = [...selectedClasses]
-    if (classes.length === 0) {
+    const classesArray = [...selectedClasses]
+    if (classesArray.length === 0) {
       setErrorText('Selecione ao menos um defeito')
-      setStatusText('Aguardando imagem')
+      setStatusText('Aguardando processamento')
       toast.error('Selecione ao menos um defeito')
       return
     }
@@ -282,11 +299,15 @@ export default function InspecaoImagens() {
       setDetections([])
       setSelectedIndex(0)
 
-      const result = await api.analisarImagem({
-        imageFile,
-        placaCodigo: DEFAULT_PLACA_CODIGO,
-        classes,
-      })
+      const formData = new FormData()
+      formData.append('file', imageFile)
+      formData.append('placaCodigo', DEFAULT_PLACA_CODIGO)
+      
+      if (classesArray.length > 0) {
+        formData.append('classes', classesArray.join(','))
+      }
+
+      const result = await api.analisarImagem(formData)
 
       const nextDetections = Array.isArray(result.detections) ? result.detections : []
       setDetections(nextDetections)
@@ -294,7 +315,7 @@ export default function InspecaoImagens() {
       setStatusText('Deteccao concluida')
       toast.success('Deteccao concluida com sucesso')
     } catch (error) {
-      setStatusText('Aguardando imagem')
+      setStatusText('Aguardando imagem ou lote')
       toast.error(error.message)
     } finally {
       setIsAnalyzing(false)
@@ -312,21 +333,31 @@ export default function InspecaoImagens() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+              accept=".jpg,.jpeg,.png,.zip,image/jpeg,image/png,application/zip"
               onChange={onImageChange}
               className="hidden"
             />
+            
             <button
               onClick={handleSelectFile}
-              className="px-4 py-2.5 bg-bg-elevated border border-border text-text-primary font-mono text-[10px] font-black uppercase rounded-lg hover:border-amber transition-all"
+              className="px-4 py-2.5 bg-bg-elevated border border-border text-text-primary font-mono text-[10px] font-black uppercase rounded-lg hover:border-amber transition-all cursor-pointer"
             >
-              Carregar imagem
+              {imageFile ? 'Trocar arquivo' : 'Carregar arquivo'}
             </button>
+
+            {imageFile && (
+              <button
+                onClick={clearImage}
+                className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-[10px] font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
+              >
+                Remover
+              </button>
+            )}
 
             <button
               onClick={runDetection}
               disabled={isAnalyzing || !imageFile}
-              className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-all"
+              className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-all cursor-pointer"
             >
               {isAnalyzing ? 'Processando...' : 'Executar deteccao'}
             </button>
@@ -345,14 +376,14 @@ export default function InspecaoImagens() {
               <button
                 type="button"
                 onClick={selectAllClasses}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors"
+                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
               >
                 Selecionar todos
               </button>
               <button
                 type="button"
                 onClick={clearSelectedClasses}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors"
+                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
               >
                 Limpar selecao
               </button>
@@ -361,7 +392,7 @@ export default function InspecaoImagens() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {availableClasses.map((className) => (
-              <label key={className} className="flex items-center gap-2 text-[11px] font-mono text-text-primary border border-border rounded px-2 py-2 bg-bg-base/70">
+              <label key={className} className="flex items-center gap-2 text-[11px] font-mono text-text-primary border border-border rounded px-2 py-2 bg-bg-base/70 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedClassesSet.has(className)}
@@ -383,9 +414,23 @@ export default function InspecaoImagens() {
             <div className="p-4 border-b border-border bg-bg-elevated/20">
               <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Imagem original</span>
             </div>
+            
             <div ref={originalCanvasWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black/40 min-h-0 overflow-auto">
-              {!selectedImageUrl && <div className="text-text-muted text-[10px] uppercase font-mono">Aguardando imagem</div>}
-              {selectedImageUrl && <canvas ref={originalCanvasRef} className="max-w-full rounded-lg border border-border" />}
+              {!imageFile && <div className="text-text-muted text-[10px] uppercase font-mono">Aguardando imagem ou lote</div>}
+              
+              {imageFile && (imageFile.name.endsWith('.zip') || imageFile.type === 'application/zip') && (
+                <div className="flex flex-col items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-amber">
+                    <path d="M21 8v13H3V3h7l5 5zm-7 5h-2v-2h2v2zm0 4h-2v-2h2v2zm2-2h2v-2h-2v2zm0 4h2v-2h-2v2z" />
+                  </svg>
+                  <span className="text-amber text-[12px] uppercase font-mono font-bold">Lote ZIP Selecionado</span>
+                  <span className="text-text-muted text-[10px] font-mono">{imageFile.name}</span>
+                </div>
+              )}
+
+              {imageFile && !imageFile.name.endsWith('.zip') && imageFile.type !== 'application/zip' && selectedImageUrl && (
+                <canvas ref={originalCanvasRef} className="max-w-full rounded-lg border border-border" />
+              )}
             </div>
           </div>
 
@@ -403,7 +448,7 @@ export default function InspecaoImagens() {
                 type="button"
                 disabled={detections.length < 2}
                 onClick={goToPrevDetection}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors"
+                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
               >
                 &lt; Defeito anterior
               </button>
@@ -424,7 +469,7 @@ export default function InspecaoImagens() {
                 type="button"
                 disabled={detections.length < 2}
                 onClick={goToNextDetection}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors"
+                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
               >
                 Proximo defeito &gt;
               </button>
