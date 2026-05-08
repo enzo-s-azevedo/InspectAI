@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- ==================== TABELA: PLACAS ====================
 CREATE TABLE IF NOT EXISTS placas (
   id VARCHAR(255) PRIMARY KEY,
-  codigo VARCHAR(50) UNIQUE NOT NULL COMMENT 'PCB-AALLL-LX',
+  codigo VARCHAR(50) UNIQUE COMMENT 'Compatibilidade com telas/consultas legadas',
   nome_classe VARCHAR(120) NOT NULL DEFAULT 'desconhecida' COMMENT 'Classe/nome da placa',
   descricao TEXT,
   localizacao VARCHAR(255),
@@ -40,14 +40,13 @@ CREATE TABLE IF NOT EXISTS placas (
 CREATE TABLE IF NOT EXISTS defeitos (
   id VARCHAR(255) PRIMARY KEY,
   codigoInterno VARCHAR(50) UNIQUE NOT NULL COMMENT '#DEF-XXXX',
-  placaId VARCHAR(255) NOT NULL,
-  id_placa_origem VARCHAR(255),
+  id_placa_origem VARCHAR(255) NOT NULL,
   classe VARCHAR(120) NOT NULL DEFAULT 'defeito-nao-classificado',
   data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   nome_arquivo_origem VARCHAR(500) NOT NULL DEFAULT 'desconhecido',
-  tipo VARCHAR(100) NOT NULL COMMENT 'rachadura, oxidacao, solda-fria, etc',
+  tipo VARCHAR(100) COMMENT 'Compatibilidade com filtros/telas antigas',
   componente VARCHAR(255),
-  origem VARCHAR(50) NOT NULL COMMENT 'manual, automatico, importado',
+  origem VARCHAR(50) NOT NULL DEFAULT 'manual' COMMENT 'manual, automatico, importado',
   severidade VARCHAR(50) DEFAULT 'media' COMMENT 'baixa, media, alta, critica',
   descricao LONGTEXT,
   
@@ -58,10 +57,9 @@ CREATE TABLE IF NOT EXISTS defeitos (
   atualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   resolvido DATETIME,
   
-  FOREIGN KEY (placaId) REFERENCES placas(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_placa_origem) REFERENCES placas(id) ON DELETE CASCADE,
   FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE SET NULL,
   
-  INDEX idx_placaId (placaId),
   INDEX idx_id_placa_origem (id_placa_origem),
   INDEX idx_classe (classe),
   INDEX idx_data_hora (data_hora),

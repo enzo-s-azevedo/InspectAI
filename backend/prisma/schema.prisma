@@ -32,7 +32,7 @@ model Usuario {
 // ==================== PLACAS ====================
 model Placa {
   id          String   @id @default(cuid())
-  codigo      String   @unique // PCB-AALLL-LX
+  codigo      String?  @unique // Compatibilidade com telas/consultas legadas
   nomeClasse  String   @default("desconhecida") @map("nome_classe")
   descricao   String?
   localizacao String?
@@ -50,16 +50,15 @@ model Placa {
 model Defeito {
   id          String   @id @default(cuid())
   codigoInterno String  @unique @default(cuid()) // #DEF-XXXX
-  placaId     String
-  idPlacaOrigem String? @map("id_placa_origem")
-  placa       Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
+  idPlacaOrigem String @map("id_placa_origem")
+  placa       Placa    @relation(fields: [idPlacaOrigem], references: [id], onDelete: Cascade)
   
   classe      String   @default("defeito-nao-classificado")
   dataHora    DateTime @default(now()) @map("data_hora")
   nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
-  tipo        String   // rachadura, oxidacao, solda-fria, etc
+  tipo        String?  // Compatibilidade com filtros/telas antigas
   componente  String?  // descrição do componente afetado
-  origem      String   // manual, automatico, importado
+  origem      String   @default("manual") // manual, automatico, importado
   severidade  String   @default("media") // baixa, media, alta, critica
   descricao   String?  @db.Text
   
@@ -76,7 +75,6 @@ model Defeito {
   inspecoes   Inspecao[]
   relatorios  RelatorioDefeito[]
 
-  @@index([placaId])
   @@index([idPlacaOrigem])
   @@index([usuarioId])
   @@index([status])

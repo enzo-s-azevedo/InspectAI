@@ -54,13 +54,14 @@ export async function persistDetections({ detections, placa, imageName }) {
     const tipo = String(item.label || 'defeito-nao-classificado');
     const confidence = Number(item.confidence || 0);
     const bbox = Array.isArray(item.bbox) ? item.bbox : null;
+    const detectedAt = item.data_hora ? new Date(item.data_hora) : null;
 
     const defeito = await prisma.defeito.create({
       data: {
         codigoInterno: buildDefectCode(),
-        placaId: placa.id,
         idPlacaOrigem: placa.id,
         classe: tipo,
+        dataHora: detectedAt && !Number.isNaN(detectedAt.getTime()) ? detectedAt : undefined,
         nomeArquivoOrigem: imageName || 'upload.jpg',
         tipo,
         componente: imageName || 'imagem',

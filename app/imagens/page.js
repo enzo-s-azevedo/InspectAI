@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 const DEFAULT_PLACA_CODIGO = 'PCB-AUTO-001'
 const MODEL_PATH = 'runs/detect/train/weights/best.pt'
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm']
 
 function formatConfidence(value) {
   const confidence = Number(value || 0)
@@ -42,8 +43,10 @@ export default function InspecaoImagens() {
 
   const selectedImageUrl = useMemo(() => {
     if (!imageFile) return null
-    // Evita tentar processar o ZIP como se fosse uma imagem
-    if (imageFile.name.endsWith('.zip') || imageFile.type === 'application/zip') return null
+    const lowerName = imageFile.name.toLowerCase()
+    // Evita tentar processar ZIP/video como imagem
+    if (lowerName.endsWith('.zip') || imageFile.type === 'application/zip') return null
+    if (VIDEO_EXTENSIONS.some((extension) => lowerName.endsWith(extension)) || imageFile.type.startsWith('video/')) return null
     return URL.createObjectURL(imageFile)
   }, [imageFile])
 
@@ -227,9 +230,10 @@ export default function InspecaoImagens() {
 
     const isImage = String(file.type || '').startsWith('image/')
     const isZip = file.type === 'application/zip' || file.type === 'application/x-zip-compressed' || file.name.endsWith('.zip')
+    const isVideo = String(file.type || '').startsWith('video/') || VIDEO_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension))
 
-    if (!isImage && !isZip) {
-      toast.error('Selecione uma imagem (.jpg, .png) ou um lote (.zip)')
+    if (!isImage && !isZip && !isVideo) {
+      toast.error('Selecione uma imagem (.jpg, .png), vídeo ou lote (.zip)')
       event.target.value = ''
       return
     }
@@ -237,7 +241,7 @@ export default function InspecaoImagens() {
     setImageFile(file)
     setDetections([])
     setSelectedIndex(0)
-    setStatusText(isZip ? 'Lote ZIP selecionado' : 'Aguardando imagem')
+    setStatusText(isZip ? 'Lote ZIP selecionado' : isVideo ? 'Video selecionado' : 'Aguardando imagem')
     setErrorText('')
   }
 
@@ -304,7 +308,7 @@ export default function InspecaoImagens() {
       formData.append('placaCodigo', DEFAULT_PLACA_CODIGO)
       
       if (classesArray.length > 0) {
-        formData.append('classes', classesArray.join(','))
+        formData.append('classes', JSON.stringify(classesArray))
       }
 
       const result = await api.analisarImagem(formData)
@@ -333,7 +337,7 @@ export default function InspecaoImagens() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jpg,.jpeg,.png,.zip,image/jpeg,image/png,application/zip"
+              accept=".jpg,.jpeg,.png,.zip,.mp4,.mov,.avi,.mkv,.webm,image/jpeg,image/png,application/zip,video/*"
               onChange={onImageChange}
               className="hidden"
             />
@@ -424,6 +428,17 @@ export default function InspecaoImagens() {
                     <path d="M21 8v13H3V3h7l5 5zm-7 5h-2v-2h2v2zm0 4h-2v-2h2v2zm2-2h2v-2h-2v2zm0 4h2v-2h-2v2z" />
                   </svg>
                   <span className="text-amber text-[12px] uppercase font-mono font-bold">Lote ZIP Selecionado</span>
+                  <span className="text-text-muted text-[10px] font-mono">{imageFile.name}</span>
+                </div>
+              )}
+
+              {imageFile && (String(imageFile.type || '').startsWith('video/') || VIDEO_EXTENSIONS.some((extension) => imageFile.name.toLowerCase().endsWith(extension))) && (
+                <div className="flex flex-col items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-amber">
+                    <path d="M15 10l4.5-2.5v9L15 14v-4z" />
+                    <rect x="3" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                  <span className="text-amber text-[12px] uppercase font-mono font-bold">Video selecionado</span>
                   <span className="text-text-muted text-[10px] font-mono">{imageFile.name}</span>
                 </div>
               )}

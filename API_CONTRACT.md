@@ -148,8 +148,8 @@ Cria uma nova placa.
 **Payload de entrada:**
 ```json
 {
-  "codigo": "PCB-D001-L1",
   "nome_classe": "PCB-D001-L1",
+  "codigo": "PCB-D001-L1",
   "descricao": "Placa de controle linha D",
   "localizacao": "Setor 04 - Prateleira 01"
 }
@@ -245,11 +245,8 @@ Cria um defeito manualmente.
 ```json
 {
   "classe": "oxidacao",
-  "tipo": "oxidacao",
-  "componente": "Trilha de cobre",
-  "origem": "manual",
-  "severidade": "alta",
-  "descricao": "Oxidação detectada na trilha principal",
+  "data_hora": "2026-05-06T21:46:10.935Z",
+  "nome_arquivo_origem": "seed-pcb-b002.png",
   "id_placa_origem": "cmoul70pr0004ttzwnxlcarqa"
 }
 ```
@@ -379,9 +376,9 @@ Envia imagem para análise pelo modelo YOLO.
 **Payload de entrada (`multipart/form-data`):**
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| `file` | file | Imagem JPG, PNG ou ZIP |
+| `file` | file | Imagem JPG, PNG, ZIP ou vídeo |
 | `placaCodigo` | string | Código da placa (ex: `PCB-A001-L1`) |
-| `classes` | string | Classes a filtrar (opcional, ex: `rachadura,oxidacao`) |
+| `classes` | string | Classes a filtrar (opcional, JSON array ou lista separada por vírgula) |
 
 **Resposta de sucesso `200`:**
 ```json

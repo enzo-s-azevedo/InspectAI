@@ -4,15 +4,20 @@ const BASE_URL = '/backend-api'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function getErrorMessage(payload, fallback) {
+  if (typeof payload?.error === 'string') return payload.error
+  return payload?.error?.message || payload?.message || fallback
+}
+
 async function request(path) {
   const res = await fetch(`${BASE_URL}${path}`)
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
-    throw new Error(error.message || `Erro ${res.status}`)
+    throw new Error(getErrorMessage(error, `Erro ${res.status}`))
   }
   const json = await res.json()
   // O backend retorna { success, data, meta, error }
-  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  if (!json.success) throw new Error(getErrorMessage(json, 'Erro desconhecido'))
   return json.data
 }
 
@@ -24,10 +29,10 @@ async function requestBody(method, path, body) {
   })
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
-    throw new Error(error.message || `Erro ${res.status}`)
+    throw new Error(getErrorMessage(error, `Erro ${res.status}`))
   }
   const json = await res.json()
-  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  if (!json.success) throw new Error(getErrorMessage(json, 'Erro desconhecido'))
   return json.data
 }
 
@@ -38,10 +43,10 @@ async function requestForm(path, formData) {
   })
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
-    throw new Error(error.message || `Erro ${res.status}`)
+    throw new Error(getErrorMessage(error, `Erro ${res.status}`))
   }
   const json = await res.json()
-  if (!json.success) throw new Error(json.error || 'Erro desconhecido')
+  if (!json.success) throw new Error(getErrorMessage(json, 'Erro desconhecido'))
   return json.data
 }
 
