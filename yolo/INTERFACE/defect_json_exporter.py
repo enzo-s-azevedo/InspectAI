@@ -42,7 +42,8 @@ class DefectJsonExporter:
                 {
                     "id": next_id,
                     "classe": str(defect["label"]),
-                    "imagem_origem": str(image_path),
+                    "nome_arquivo_origem": str(image_path.name),
+                    "id_placa_origem": "DEFAULT",
                     "data_hora": "DEFAULT",
                 }
             )

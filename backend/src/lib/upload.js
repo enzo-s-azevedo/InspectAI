@@ -1,7 +1,8 @@
 import JSZip from 'jszip';
 
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
-const ALLOWED_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.zip']);
+const ALLOWED_VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm']);
+const ALLOWED_UPLOAD_EXTENSIONS = new Set([...ALLOWED_IMAGE_EXTENSIONS, '.zip', ...ALLOWED_VIDEO_EXTENSIONS]);
 
 function getLowerExtension(fileName) {
   const value = String(fileName || '').toLowerCase();
@@ -37,7 +38,7 @@ export async function readAndValidateUpload(file) {
 
   const extension = getLowerExtension(file.name);
   if (!ALLOWED_UPLOAD_EXTENSIONS.has(extension)) {
-    throw new Error('Formato invalido. Envie .jpg, .png ou .zip');
+    throw new Error('Formato invalido. Envie .jpg, .png, .zip ou video');
   }
 
   const buffer = new Uint8Array(await file.arrayBuffer());
@@ -50,6 +51,17 @@ export async function readAndValidateUpload(file) {
       kind: 'zip',
       fileName: file.name || 'upload.zip',
       buffer,
+    };
+  }
+
+  if (ALLOWED_VIDEO_EXTENSIONS.has(extension)) {
+    return {
+      kind: 'video',
+      video: {
+        name: file.name || 'upload.mp4',
+        buffer,
+        mimeType: file.type || 'application/octet-stream',
+      },
     };
   }
 
@@ -104,8 +116,9 @@ export function normalizeDetections(payload) {
 
   return payload.map((item) => ({
     class_id: Number(item.class_id || 0),
-    label: String(item.label || 'defeito-nao-classificado'),
+    label: String(item.label || item.classe || 'defeito-nao-classificado'),
     confidence: Number(item.confidence || 0),
     bbox: Array.isArray(item.bbox) ? item.bbox : [],
+    data_hora: item.data_hora || null,
   }));
 }

@@ -36,7 +36,7 @@ export async function GET() {
       },
       '/api/detection': {
         post: {
-          summary: 'Envia uma imagem da PCB para análise na IA',
+          summary: 'Envia imagem, lote ZIP ou vídeo da PCB para análise na IA',
           tags: ['Health & Detection'],
           requestBody: {
             required: true,
@@ -44,7 +44,11 @@ export async function GET() {
               'multipart/form-data': {
                 schema: {
                   type: 'object',
-                  properties: { file: { type: 'string', format: 'binary', description: 'Imagem da placa' } }
+                  properties: {
+                    file: { type: 'string', format: 'binary', description: 'Imagem, ZIP ou vídeo da placa' },
+                    placaCodigo: { type: 'string', description: 'Código opcional da placa' },
+                    classes: { type: 'string', description: 'JSON array ou lista separada por vírgula' },
+                  }
                 }
               }
             }
@@ -155,7 +159,7 @@ export async function GET() {
                       {
                         id: 'clx789xyz0002',
                         codigo: 'PCB-AALLL-L1',
-                        nomeClasse: 'placa-mae-v2',
+                        nome_classe: 'placa-mae-v2',
                         defeitos: []
                       }
                     ]
@@ -173,8 +177,8 @@ export async function GET() {
             content: {
               'application/json': {
                 example: {
+                  nome_classe: 'placa-fonte',
                   codigo: 'PCB-AALLL-L2',
-                  nomeClasse: 'placa-fonte',
                   descricao: 'Lote novo recebido',
                   localizacao: 'Estoque Central'
                 }
@@ -236,9 +240,10 @@ export async function GET() {
                     data: [
                       { 
                         id: 'cld123def', 
-                        codigoInterno: '#DEF-0001', 
-                        tipo: 'oxidacao', 
-                        status: 'em-analise',
+                        classe: 'oxidacao',
+                        data_hora: '2026-05-06T21:46:10.935Z',
+                        nome_arquivo_origem: 'upload.png',
+                        id_placa_origem: 'clx789xyz0002',
                         placa: { codigo: 'PCB-A001-L1' }
                       }
                     ]
@@ -256,11 +261,10 @@ export async function GET() {
             content: {
               'application/json': {
                 example: {
-                  placaId: 'ID_DA_PLACA_AQUI',
-                  tipo: 'rachadura',
                   classe: 'rachadura',
-                  severidade: 'alta',
-                  componente: 'Resistor R22'
+                  data_hora: '2026-05-06T21:46:10.935Z',
+                  nome_arquivo_origem: 'upload.png',
+                  id_placa_origem: 'ID_DA_PLACA_AQUI'
                 }
               }
             }

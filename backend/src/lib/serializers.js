@@ -44,7 +44,7 @@ export function serializeDefeito(defeito) {
     classe: defeito.classe,
     data_hora: defeito.dataHora,
     nome_arquivo_origem: defeito.nomeArquivoOrigem,
-    id_placa_origem: defeito.idPlacaOrigem || defeito.placaId,
+    id_placa_origem: defeito.idPlacaOrigem,
     codigoInterno: defeito.codigoInterno,
     tipo: defeito.tipo,
     componente: defeito.componente,

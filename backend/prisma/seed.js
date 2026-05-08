@@ -98,7 +98,6 @@ async function main() {
       severidade: 'media',
       descricao: 'Rachadura detectada pelo YOLO',
       status: 'aberto',
-      placaId: placa1.id,
       usuarioId: inspetor.id,
     },
   });
@@ -117,7 +116,6 @@ async function main() {
       severidade: 'alta',
       descricao: 'Oxidação visível na trilha',
       status: 'em-analise',
-      placaId: placa2.id,
       usuarioId: inspetor.id,
     },
   });

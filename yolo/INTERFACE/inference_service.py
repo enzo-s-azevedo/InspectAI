@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+import tempfile
+from datetime import datetime, timedelta, timezone
 
 import cv2
 from ultralytics import YOLO
@@ -224,6 +226,59 @@ def predict():
     except Exception as exc:  # pragma: no cover - inference guard
         app.logger.exception("Erro de inferencia")
         return jsonify({"error": build_error(f"Falha na inferencia: {exc}", "INFERENCE_ERROR")}), 500
+
+@app.route('/predict-video', methods=['POST'])
+def predict_video():
+    if 'video' not in request.files:
+        return jsonify({"error": build_error("Nenhum video enviado", "INVALID_INPUT")}), 400
+
+    if service is None:
+        return jsonify({"error": build_error("Modelo de IA indisponivel", "MODEL_UNAVAILABLE")}), 503
+
+    video_file = request.files['video']
+    suffix = Path(video_file.filename or "upload.mp4").suffix or ".mp4"
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            video_path = Path(temp_file.name)
+            temp_file.write(video_file.read())
+
+        capture = cv2.VideoCapture(str(video_path))
+        if not capture.isOpened():
+            return jsonify({"error": build_error("Video invalido ou corrompido", "INVALID_VIDEO")}), 400
+
+        fps = capture.get(cv2.CAP_PROP_FPS) or 1
+        frame_interval = max(1, int(fps))
+        detections: list[Detection] = []
+        frame_index = 0
+        started_at = datetime.now(timezone.utc)
+
+        while True:
+            ok, frame = capture.read()
+            if not ok:
+                break
+
+            if frame_index % frame_interval == 0:
+                seconds = frame_index / fps
+                frame_detections = service.predict_defects(frame, set(), set())
+                for item in frame_detections:
+                    item["data_hora"] = (started_at + timedelta(seconds=seconds)).isoformat()
+                    item["frame"] = frame_index
+                    detections.append(item)
+
+            frame_index += 1
+
+        capture.release()
+        return jsonify(detections)
+    except Exception as exc:  # pragma: no cover - inference guard
+        app.logger.exception("Erro de inferencia em video")
+        return jsonify({"error": build_error(f"Falha na inferencia de video: {exc}", "INFERENCE_ERROR")}), 500
+    finally:
+        try:
+            if 'video_path' in locals():
+                video_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 @app.route('/health', methods=['GET'])
 def health():

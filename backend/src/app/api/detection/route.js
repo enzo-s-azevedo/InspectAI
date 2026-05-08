@@ -22,6 +22,25 @@ async function predictFromAi({ aiUrl, image }) {
   return normalizeDetections(payload);
 }
 
+async function predictVideoFromAi({ aiUrl, video }) {
+  const aiFormData = new FormData();
+  aiFormData.append('video', new Blob([video.buffer], { type: video.mimeType }), video.name || 'upload.mp4');
+
+  const aiResponse = await fetch(`${aiUrl}/predict-video`, {
+    method: 'POST',
+    body: aiFormData,
+    cache: 'no-store',
+  });
+
+  if (!aiResponse.ok) {
+    const text = await aiResponse.text();
+    throw new Error(`Falha da IA para ${video.name}: ${text}`);
+  }
+
+  const payload = await aiResponse.json();
+  return normalizeDetections(payload);
+}
+
 function parseSelectedClasses(rawValue) {
   if (!rawValue) return [];
 
@@ -32,13 +51,16 @@ function parseSelectedClasses(rawValue) {
       .map((item) => String(item || '').trim())
       .filter((item) => item.length > 0);
   } catch {
-    return [];
+    return String(rawValue)
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
   }
 }
 
 function filterDetectionsBySelectedClasses(detections, selectedClasses) {
   if (!Array.isArray(selectedClasses) || selectedClasses.length === 0) {
-    return [];
+    return detections;
   }
 
   const selected = new Set(selectedClasses.map((item) => String(item)));
@@ -66,9 +88,15 @@ export async function POST(request) {
 
     const aiUrl = process.env.AI_SERVICE_URL || 'http://ai:5000';
 
-    let images;
+    let inputs;
     try {
-      images = uploadInfo.kind === 'zip' ? await extractImagesFromZip(uploadInfo.buffer) : [uploadInfo.image];
+      if (uploadInfo.kind === 'zip') {
+        inputs = await extractImagesFromZip(uploadInfo.buffer);
+      } else if (uploadInfo.kind === 'video') {
+        inputs = [uploadInfo.video];
+      } else {
+        inputs = [uploadInfo.image];
+      }
     } catch (error) {
       return fail(error.message || 'Arquivo .zip invalido', 400, 'INVALID_UPLOAD');
     }
@@ -82,12 +110,15 @@ export async function POST(request) {
     const flattenedDetections = [];
     const persisted = [];
 
-    for (const image of images) {
+    for (const input of inputs) {
       let detections;
       try {
-        detections = await predictFromAi({ aiUrl, image });
+        detections =
+          uploadInfo.kind === 'video'
+            ? await predictVideoFromAi({ aiUrl, video: input })
+            : await predictFromAi({ aiUrl, image: input });
       } catch (error) {
-        return fail('Falha ao processar imagem no servico de IA', 502, 'AI_SERVICE_ERROR', error.message || null);
+        return fail('Falha ao processar arquivo no servico de IA', 502, 'AI_SERVICE_ERROR', error.message || null);
       }
 
       detections = filterDetectionsBySelectedClasses(detections, selectedClasses);
@@ -97,12 +128,12 @@ export async function POST(request) {
       const createdDefeitos = await persistDetections({
         detections,
         placa,
-        imageName: image.name || 'upload.jpg',
+        imageName: input.name || 'upload',
       });
 
       persisted.push(...createdDefeitos);
       perImage.push({
-        fileName: image.name,
+        fileName: input.name,
         detections,
         savedDefeitos: createdDefeitos.map(serializeDefeito),
       });
@@ -117,7 +148,7 @@ export async function POST(request) {
       {
         inputType: uploadInfo.kind,
         selectedClasses,
-        totalFiles: images.length,
+        totalFiles: inputs.length,
         totalDetections: flattenedDetections.length,
         totalPersisted: persisted.length,
       }

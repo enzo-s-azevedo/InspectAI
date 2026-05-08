@@ -1,34 +1,57 @@
 import prisma from '@/lib/db';
 import { fail, ok, readJson } from '@/lib/http';
-import { serializeUsuario } from '@/lib/serializers';
+import { serializePlaca } from '@/lib/serializers';
 
-// GET: Busca um usuário específico
+// GET: Busca uma placa específica
 export async function GET(request, { params }) {
-  const { id } = params;
-  const usuario = await prisma.placas.findUnique({ where: { id } });
-  return usuario ? ok(serializeUsuario(usuario)) : fail('Usuário não encontrado', 404);
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+  const placa = await prisma.placa.findUnique({
+    where: { id: String(id) },
+    include: {
+      defeitos: {
+        select: {
+          id: true,
+          codigoInterno: true,
+          classe: true,
+          tipo: true,
+          status: true,
+          severidade: true,
+        },
+      },
+    },
+  });
+  return placa ? ok(serializePlaca(placa)) : fail('Placa nao encontrada', 404);
 }
 
-// PUT: Edita o usuário
+// PUT: Edita a placa
 export async function PUT(request, { params }) {
   try {
     const resolvedParams = await params;
     const id = resolvedParams.id;
     const body = await readJson(request);
+    const { nome_classe, nomeClasse, codigo, descricao, localizacao } = body || {};
 
     const placaAtualizada = await prisma.placa.update({
       where: { id: String(id) },
-      data: body
+      data: {
+        ...(codigo !== undefined ? { codigo: codigo || null } : {}),
+        ...(nome_classe !== undefined || nomeClasse !== undefined
+          ? { nomeClasse: String(nome_classe || nomeClasse) }
+          : {}),
+        ...(descricao !== undefined ? { descricao } : {}),
+        ...(localizacao !== undefined ? { localizacao } : {}),
+      },
     });
 
-    return ok(placaAtualizada);
+    return ok(serializePlaca(placaAtualizada));
   } catch (error) {
     console.error('ERRO NO PUT PLACA:', error);
     return fail('Erro ao atualizar placa: ' + error.message, 400);
   }
 }
 
-// DELETE: Remove o usuário
+// DELETE: Remove a placa
 export async function DELETE(request, { params }) {
   try {
     // 1. Aguarda a resolução dos parâmetros da URL

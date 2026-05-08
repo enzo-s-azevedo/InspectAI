@@ -37,21 +37,22 @@ export async function GET(request) {
 /**
  * POST /api/placas
  * Criar nova placa
- * Body: { codigo, descricao?, localizacao? }
+ * Body: { nome_classe, codigo?, descricao?, localizacao? }
  */
 export async function POST(request) {
   try {
     const body = await readJson(request);
     const { codigo, nome_classe, nomeClasse, descricao, localizacao } = body || {};
+    const classeFinal = nome_classe || nomeClasse || codigo;
 
-    if (!codigo) {
-      return fail('Codigo da placa e obrigatorio', 400, 'VALIDATION_ERROR');
+    if (!classeFinal) {
+      return fail('nome_classe da placa e obrigatorio', 400, 'VALIDATION_ERROR');
     }
 
     const novaPlaca = await prisma.placa.create({
       data: {
-        codigo,
-        nomeClasse: nome_classe || nomeClasse || codigo,
+        codigo: codigo || null,
+        nomeClasse: String(classeFinal),
         descricao,
         localizacao,
       },
