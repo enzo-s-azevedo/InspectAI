@@ -3,6 +3,43 @@ import { resolvePlaca, persistDetections } from '@/lib/detection';
 import { serializeDefeito } from '@/lib/serializers';
 import { extractImagesFromZip, normalizeDetections, readAndValidateUpload } from '@/lib/upload';
 
+class AiServiceError extends Error {
+  constructor(message, status, code, details = null) {
+    super(message);
+    this.name = 'AiServiceError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+async function readAiError(response) {
+  const text = await response.text();
+  if (!text) {
+    return {
+      message: `Servico de IA retornou HTTP ${response.status}`,
+      code: 'AI_SERVICE_ERROR',
+      details: null,
+    };
+  }
+
+  try {
+    const payload = JSON.parse(text);
+    const aiError = payload?.error || payload;
+    return {
+      message: aiError?.message || `Servico de IA retornou HTTP ${response.status}`,
+      code: aiError?.code || 'AI_SERVICE_ERROR',
+      details: payload,
+    };
+  } catch {
+    return {
+      message: text,
+      code: 'AI_SERVICE_ERROR',
+      details: text,
+    };
+  }
+}
+
 async function predictFromAi({ aiUrl, image }) {
   const aiFormData = new FormData();
   aiFormData.append('image', new Blob([image.buffer], { type: image.mimeType }), image.name || 'upload.jpg');
@@ -14,8 +51,13 @@ async function predictFromAi({ aiUrl, image }) {
   });
 
   if (!aiResponse.ok) {
-    const text = await aiResponse.text();
-    throw new Error(`Falha da IA para ${image.name}: ${text}`);
+    const error = await readAiError(aiResponse);
+    throw new AiServiceError(
+      `Falha da IA para ${image.name}: ${error.message}`,
+      aiResponse.status,
+      error.code,
+      error.details
+    );
   }
 
   const payload = await aiResponse.json();
@@ -33,8 +75,13 @@ async function predictVideoFromAi({ aiUrl, video }) {
   });
 
   if (!aiResponse.ok) {
-    const text = await aiResponse.text();
-    throw new Error(`Falha da IA para ${video.name}: ${text}`);
+    const error = await readAiError(aiResponse);
+    throw new AiServiceError(
+      `Falha da IA para ${video.name}: ${error.message}`,
+      aiResponse.status,
+      error.code,
+      error.details
+    );
   }
 
   const payload = await aiResponse.json();
@@ -118,7 +165,15 @@ export async function POST(request) {
             ? await predictVideoFromAi({ aiUrl, video: input })
             : await predictFromAi({ aiUrl, image: input });
       } catch (error) {
-        return fail('Falha ao processar arquivo no servico de IA', 502, 'AI_SERVICE_ERROR', error.message || null);
+        const modelUnavailable = error instanceof AiServiceError && error.code === 'MODEL_UNAVAILABLE';
+        return fail(
+          modelUnavailable
+            ? 'Modelo de IA indisponivel. Adicione um arquivo .pt em yolo/INTERFACE, preferencialmente best.pt.'
+            : 'Falha ao processar arquivo no servico de IA',
+          modelUnavailable ? 503 : 502,
+          modelUnavailable ? 'MODEL_UNAVAILABLE' : 'AI_SERVICE_ERROR',
+          error.message || null
+        );
       }
 
       detections = filterDetectionsBySelectedClasses(detections, selectedClasses);

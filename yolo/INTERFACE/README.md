@@ -9,6 +9,20 @@ Esta pasta contem apenas recursos de visualizacao e inferencia.
 - Exportacao JSON de defeitos (`defect_json_exporter.py`)
 - Endpoints `/predict` para imagens e `/predict-video` para vídeos
 
+## Modelo obrigatorio
+Para a API detectar defeitos, copie o peso treinado para esta pasta como:
+
+```bash
+yolo/INTERFACE/best.pt
+```
+
+Tambem funciona com outro arquivo `*.pt` nesta pasta, mas `best.pt` tem prioridade.
+Depois de adicionar o arquivo, reconstrua o servico:
+
+```bash
+docker compose up -d --build ai backend frontend
+```
+
 ## Regras de acoplamento
 - Nao contem logica de treinamento.
 - Nao importa nada da pasta TREINO.

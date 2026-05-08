@@ -11,9 +11,6 @@ build/
 mysql_data/
 inspectai_mysql_data/
 
-# Modelos pesados de IA
-*.pt
-
 # Arquivos do sistema e IDE
 .DS_Store
 .vscode/
