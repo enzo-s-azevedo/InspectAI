@@ -37,6 +37,32 @@ curl -X POST http://localhost:3001/api/detection \
 - Usuario: root
 - Senha: root_password
 
+## 6. Mudancas destrutivas de schema
+
+Esta versao altera chaves e relacoes de `placas` e `defeitos`, entao volumes MySQL antigos podem impedir o `prisma db push` de subir o backend.
+
+Em ambiente local, se nao houver dados importantes, recrie o banco:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Se precisar forcar o Prisma manualmente sabendo que pode perder dados:
+
+```bash
+cd backend
+npm run db:push:force
+```
+
+Se o Prisma avisar que precisa recriar o banco inteiro:
+
+```bash
+cd backend
+npm run db:reset:push
+npm run db:seed
+```
+
 ## Notas
 
 - A migracao Prisma eh aplicada automaticamente no startup do backend.

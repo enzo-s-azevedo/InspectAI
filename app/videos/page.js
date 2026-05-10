@@ -13,7 +13,7 @@ export default function FeedVideo() {
         const defeitos = await api.getDefeitos()
         const mapped = defeitos.slice(0, 8).map((item, index) => ({
           id: item.codigoInterno,
-          tipo: item.tipo,
+          classeDefeito: item.classe_defeito,
           tempo: String(index * 11).padStart(2, '0'),
         }))
         setLogs(mapped)
@@ -97,7 +97,7 @@ export default function FeedVideo() {
                     <span className="text-[9px] font-mono text-purple-500 font-bold tracking-tighter">{log.id}</span>
                     <span className="text-[8px] text-white/20 font-mono italic">{log.tempo}</span>
                   </div>
-                  <h4 className="text-[11px] font-bold text-white mb-4 tracking-tight">{log.tipo}</h4>
+                  <h4 className="text-[11px] font-bold text-white mb-4 tracking-tight">{log.classeDefeito}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <button className="py-1.5 text-[8px] font-black uppercase bg-white/5 hover:bg-white/10 rounded border border-white/10 text-white/40 hover:text-white transition-all">Replay</button>
                     <button className="py-1.5 text-[8px] font-black uppercase bg-white/5 hover:bg-white/10 rounded border border-white/10 text-white/40 hover:text-red-500 transition-all">Descartar</button>

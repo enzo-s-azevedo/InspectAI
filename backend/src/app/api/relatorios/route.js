@@ -22,6 +22,7 @@ export async function GET(request) {
               include: {
                 placa: true,
                 usuario: true,
+                videos: true,
               },
             },
           },
@@ -64,7 +65,10 @@ export async function POST(request) {
         status,
         defeitos: {
           create: Array.isArray(defeitoIds)
-            ? defeitoIds.map((defeitoId) => ({ defeitoId }))
+            ? defeitoIds
+                .map((defeitoId) => Number(defeitoId))
+                .filter((defeitoId) => Number.isInteger(defeitoId))
+                .map((defeitoId) => ({ defeitoId }))
             : [],
         },
       },
@@ -76,6 +80,7 @@ export async function POST(request) {
               include: {
                 placa: true,
                 usuario: true,
+                videos: true,
               },
             },
           },

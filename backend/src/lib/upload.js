@@ -120,5 +120,6 @@ export function normalizeDetections(payload) {
     confidence: Number(item.confidence || 0),
     bbox: Array.isArray(item.bbox) ? item.bbox : [],
     data_hora: item.data_hora || null,
+    frame: item.frame ?? null,
   }));
 }
