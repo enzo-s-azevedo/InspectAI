@@ -142,6 +142,53 @@ export async function GET() {
         }
       },
       // ==========================================
+      // MODELOS
+      // ==========================================
+      '/api/modelos': {
+        get: {
+          summary: 'Lista modelos de placas',
+          tags: ['Modelos'],
+          responses: {
+            200: {
+              description: 'Lista de modelos retornada com sucesso',
+              content: {
+                'application/json': {
+                  example: {
+                    total: 1,
+                    data: [
+                      {
+                        codigo: 'PCB-A001-L1',
+                        descricao: 'Modelo Placa Mae Linha A',
+                        placas: []
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: 'Cria um modelo de placa',
+          tags: ['Modelos'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                example: {
+                  codigo: 'PCB-A001-L1',
+                  descricao: 'Modelo Placa Mae Linha A'
+                }
+              }
+            }
+          },
+          responses: {
+            201: { description: 'Modelo criado com sucesso' },
+            409: { description: 'Código de modelo já existe' }
+          }
+        }
+      },
+      // ==========================================
       // PLACAS
       // ==========================================
       '/api/placas': {
@@ -157,8 +204,9 @@ export async function GET() {
                     total: 1,
                     data: [
                       {
-                        id: 'clx789xyz0002',
+                        id: 1,
                         codigo: 'PCB-AALLL-L1',
+                        modelo: 'PCB-A001-L1',
                         nome_classe: 'placa-mae-v2',
                         defeitos: []
                       }
@@ -178,6 +226,7 @@ export async function GET() {
               'application/json': {
                 example: {
                   nome_classe: 'placa-fonte',
+                  modelo: 'PCB-A001-L1',
                   codigo: 'PCB-AALLL-L2',
                   descricao: 'Lote novo recebido',
                   localizacao: 'Estoque Central'
@@ -195,7 +244,7 @@ export async function GET() {
         put: {
           summary: 'Edita uma placa existente',
           tags: ['Placas'],
-          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
           requestBody: {
             content: {
               'application/json': {
@@ -211,7 +260,7 @@ export async function GET() {
         delete: {
           summary: 'Exclui uma placa do sistema',
           tags: ['Placas'],
-          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
           responses: {
             200: { description: 'Placa removida com sucesso' },
             404: { description: 'Placa não encontrada' }
@@ -239,11 +288,12 @@ export async function GET() {
                     total: 1,
                     data: [
                       { 
-                        id: 'cld123def', 
+                        id: 1, 
                         classe: 'oxidacao',
+                        classe_defeito: 'oxidacao',
                         data_hora: '2026-05-06T21:46:10.935Z',
                         nome_arquivo_origem: 'upload.png',
-                        id_placa_origem: 'clx789xyz0002',
+                        id_placa: 1,
                         placa: { codigo: 'PCB-A001-L1' }
                       }
                     ]
@@ -261,10 +311,10 @@ export async function GET() {
             content: {
               'application/json': {
                 example: {
-                  classe: 'rachadura',
+                  classe_defeito: 'rachadura',
                   data_hora: '2026-05-06T21:46:10.935Z',
                   nome_arquivo_origem: 'upload.png',
-                  id_placa_origem: 'ID_DA_PLACA_AQUI'
+                  id_placa: 1
                 }
               }
             }

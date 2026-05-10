@@ -29,10 +29,25 @@ model Usuario {
   @@map("usuarios")
 }
 
+// ==================== MODELOS ====================
+model Modelo {
+  codigo     String   @id @db.VarChar(120)
+  descricao  String?
+  criado     DateTime @default(now())
+  atualizado DateTime @updatedAt
+
+  // Relations
+  placas Placa[]
+
+  @@map("modelo")
+}
+
 // ==================== PLACAS ====================
 model Placa {
-  id          String   @id @default(cuid())
+  id          Int      @id @default(autoincrement())
   codigo      String?  @unique // Compatibilidade com telas/consultas legadas
+  modeloCodigo String  @map("modelo") @db.VarChar(120)
+  modelo      Modelo   @relation(fields: [modeloCodigo], references: [codigo], onDelete: Restrict)
   nomeClasse  String   @default("desconhecida") @map("nome_classe")
   descricao   String?
   localizacao String?
@@ -40,20 +55,22 @@ model Placa {
   atualizado  DateTime @updatedAt
 
   // Relations
-  defeitos   Defeito[]
-  inspecoes  Inspecao[]
+  defeitos       Defeito[]
+  defeitosVideo  DefeitoVideo[]
+  inspecoes      Inspecao[]
 
+  @@index([modeloCodigo])
   @@map("placas")
 }
 
 // ==================== DEFEITOS ====================
 model Defeito {
-  id          String   @id @default(cuid())
+  id          Int      @id @default(autoincrement())
   codigoInterno String  @unique @default(cuid()) // #DEF-XXXX
-  idPlacaOrigem String @map("id_placa_origem")
-  placa       Placa    @relation(fields: [idPlacaOrigem], references: [id], onDelete: Cascade)
+  idPlaca    Int      @map("id_placa")
+  placa      Placa    @relation(fields: [idPlaca], references: [id], onDelete: Cascade)
   
-  classe      String   @default("defeito-nao-classificado")
+  classeDefeito String @default("defeito-nao-classificado") @map("classe_defeito")
   dataHora    DateTime @default(now()) @map("data_hora")
   nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
   tipo        String?  // Compatibilidade com filtros/telas antigas
@@ -74,8 +91,9 @@ model Defeito {
   imagens     ImagemDefeito[]
   inspecoes   Inspecao[]
   relatorios  RelatorioDefeito[]
+  videos      DefeitoVideo[]
 
-  @@index([idPlacaOrigem])
+  @@index([idPlaca])
   @@index([usuarioId])
   @@index([status])
   @@index([criado])
@@ -85,7 +103,7 @@ model Defeito {
 // ==================== IMAGENS ====================
 model ImagemDefeito {
   id        String   @id @default(cuid())
-  defeitoId String
+  defeitoId Int
   defeito   Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
   
   url       String
@@ -98,10 +116,37 @@ model ImagemDefeito {
   @@map("imagens_defeitos")
 }
 
+// ==================== DEFEITOS EM VÍDEO ====================
+model DefeitoVideo {
+  id          Int      @id @default(autoincrement())
+  defeitoId   Int      @map("defeito_id")
+  defeito     Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
+  idPlaca     Int      @map("id_placa")
+  placa       Placa    @relation(fields: [idPlaca], references: [id], onDelete: Cascade)
+
+  classeDefeito String @default("defeito-nao-classificado") @map("classe_defeito")
+  dataHora    DateTime @default(now()) @map("datahora")
+  nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
+  frame       Int?
+  tipo        String?
+  componente  String?
+  origem      String   @default("video")
+  severidade  String   @default("media")
+  descricao   String?  @db.Text
+  status      String   @default("aberto")
+  criado      DateTime @default(now())
+  atualizado  DateTime @updatedAt
+
+  @@index([defeitoId])
+  @@index([idPlaca])
+  @@index([dataHora])
+  @@map("defeitos_video")
+}
+
 // ==================== INSPEÇÕES ====================
 model Inspecao {
   id        String   @id @default(cuid())
-  placaId   String
+  placaId   Int
   placa     Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
   
   usuarioId String
@@ -154,7 +199,7 @@ model RelatorioDefeito {
   relatorioId String
   relatorio Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
   
-  defeitoId String
+  defeitoId Int
   defeito   Defeito   @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
   
   notas     String? @db.Text

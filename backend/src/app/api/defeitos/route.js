@@ -30,6 +30,11 @@ export async function GET(request) {
             criado: 'desc',
           },
         },
+        videos: {
+          orderBy: {
+            dataHora: 'desc',
+          },
+        },
       },
       orderBy: {
         criado: 'desc',
@@ -48,7 +53,9 @@ export async function POST(request) {
     const body = await readJson(request);
     const {
       placaId,
+      id_placa,
       id_placa_origem,
+      classe_defeito,
       classe,
       data_hora,
       nome_arquivo_origem,
@@ -61,10 +68,10 @@ export async function POST(request) {
       usuarioId,
     } = body || {};
 
-    const placaOrigemId = id_placa_origem || placaId;
-    const classeFinal = classe || tipo;
-    if (!placaOrigemId || !classeFinal) {
-      return fail('id_placa_origem e classe sao obrigatorios', 400, 'VALIDATION_ERROR');
+    const placaOrigemId = Number(id_placa || id_placa_origem || placaId);
+    const classeFinal = classe_defeito || classe || tipo;
+    if (!Number.isInteger(placaOrigemId) || !classeFinal) {
+      return fail('id_placa e classe_defeito sao obrigatorios', 400, 'VALIDATION_ERROR');
     }
     const dataHora = data_hora ? new Date(data_hora) : null;
     if (dataHora && Number.isNaN(dataHora.getTime())) {
@@ -73,8 +80,8 @@ export async function POST(request) {
 
     const created = await prisma.defeito.create({
       data: {
-        idPlacaOrigem: String(placaOrigemId),
-        classe: String(classeFinal),
+        idPlaca: placaOrigemId,
+        classeDefeito: String(classeFinal),
         dataHora: dataHora || undefined,
         nomeArquivoOrigem: nome_arquivo_origem || componente || 'upload-manual',
         tipo: String(classeFinal),
@@ -89,6 +96,7 @@ export async function POST(request) {
         placa: true,
         usuario: true,
         imagens: true,
+        videos: true,
       },
     });
 

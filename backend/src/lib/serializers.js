@@ -13,12 +13,37 @@ export function serializeUsuario(usuario) {
   };
 }
 
+export function serializeModelo(modelo) {
+  if (!modelo) return null;
+
+  return {
+    codigo: modelo.codigo,
+    descricao: modelo.descricao,
+    criado: modelo.criado,
+    atualizado: modelo.atualizado,
+    placas: Array.isArray(modelo.placas)
+      ? modelo.placas.map((placa) => ({
+          id: placa.id,
+          codigo: placa.codigo,
+          nome_classe: placa.nomeClasse,
+        }))
+      : undefined,
+  };
+}
+
 export function serializePlaca(placa) {
   if (!placa) return null;
 
   return {
     id: placa.id,
     codigo: placa.codigo,
+    modelo: placa.modeloCodigo,
+    modelo_dados: placa.modelo
+      ? {
+          codigo: placa.modelo.codigo,
+          descricao: placa.modelo.descricao,
+        }
+      : undefined,
     nome_classe: placa.nomeClasse,
     descricao: placa.descricao,
     localizacao: placa.localizacao,
@@ -41,10 +66,12 @@ export function serializeDefeito(defeito) {
 
   return {
     id: defeito.id,
-    classe: defeito.classe,
+    classe: defeito.classeDefeito,
+    classe_defeito: defeito.classeDefeito,
     data_hora: defeito.dataHora,
     nome_arquivo_origem: defeito.nomeArquivoOrigem,
-    id_placa_origem: defeito.idPlacaOrigem,
+    id_placa: defeito.idPlaca,
+    id_placa_origem: defeito.idPlaca,
     codigoInterno: defeito.codigoInterno,
     tipo: defeito.tipo,
     componente: defeito.componente,
@@ -59,6 +86,7 @@ export function serializeDefeito(defeito) {
       ? {
           id: defeito.placa.id,
           codigo: defeito.placa.codigo,
+          modelo: defeito.placa.modeloCodigo,
           descricao: defeito.placa.descricao,
         }
       : null,
@@ -78,6 +106,32 @@ export function serializeDefeito(defeito) {
           criado: imagem.criado,
         }))
       : undefined,
+    videos: Array.isArray(defeito.videos)
+      ? defeito.videos.map((video) => serializeDefeitoVideo(video))
+      : undefined,
+  };
+}
+
+export function serializeDefeitoVideo(defeitoVideo) {
+  if (!defeitoVideo) return null;
+
+  return {
+    id: defeitoVideo.id,
+    defeito_id: defeitoVideo.defeitoId,
+    id_placa: defeitoVideo.idPlaca,
+    classe_defeito: defeitoVideo.classeDefeito,
+    classe: defeitoVideo.classeDefeito,
+    datahora: defeitoVideo.dataHora,
+    nome_arquivo_origem: defeitoVideo.nomeArquivoOrigem,
+    frame: defeitoVideo.frame,
+    tipo: defeitoVideo.tipo,
+    componente: defeitoVideo.componente,
+    origem: defeitoVideo.origem,
+    severidade: defeitoVideo.severidade,
+    descricao: defeitoVideo.descricao,
+    status: defeitoVideo.status,
+    criado: defeitoVideo.criado,
+    atualizado: defeitoVideo.atualizado,
   };
 }
 

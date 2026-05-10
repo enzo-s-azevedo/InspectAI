@@ -47,12 +47,43 @@ async function main() {
 
   console.log('✓ Usuários criados:', { admin: admin.id, funcionario: funcionario.id, inspetor: inspetor.id });
 
+  // Criar modelos
+  const modeloA = await prisma.modelo.upsert({
+    where: { codigo: 'PCB-A001-L1' },
+    update: {},
+    create: {
+      codigo: 'PCB-A001-L1',
+      descricao: 'Modelo Placa Mae Linha A',
+    },
+  });
+
+  const modeloB = await prisma.modelo.upsert({
+    where: { codigo: 'PCB-B002-L2' },
+    update: {},
+    create: {
+      codigo: 'PCB-B002-L2',
+      descricao: 'Modelo Controladora Linha B',
+    },
+  });
+
+  const modeloC = await prisma.modelo.upsert({
+    where: { codigo: 'PCB-C003-L3' },
+    update: {},
+    create: {
+      codigo: 'PCB-C003-L3',
+      descricao: 'Modelo Power Supply Linha C',
+    },
+  });
+
+  console.log('✓ Modelos criados:', { modeloA: modeloA.codigo, modeloB: modeloB.codigo, modeloC: modeloC.codigo });
+
   // Criar placas
   const placa1 = await prisma.placa.upsert({
     where: { codigo: 'PCB-A001-L1' },
     update: {},
     create: {
       codigo: 'PCB-A001-L1',
+      modeloCodigo: modeloA.codigo,
       nomeClasse: 'PCB-A001-L1',
       descricao: 'Placa Mãe Linha A',
       localizacao: 'Setor 01 - Prateleira 01',
@@ -64,6 +95,7 @@ async function main() {
     update: {},
     create: {
       codigo: 'PCB-B002-L2',
+      modeloCodigo: modeloB.codigo,
       nomeClasse: 'PCB-B002-L2',
       descricao: 'Controladora Linha B',
       localizacao: 'Setor 02 - Prateleira 02',
@@ -75,6 +107,7 @@ async function main() {
     update: {},
     create: {
       codigo: 'PCB-C003-L3',
+      modeloCodigo: modeloC.codigo,
       nomeClasse: 'PCB-C003-L3',
       descricao: 'Power Supply Linha C',
       localizacao: 'Setor 03 - Prateleira 03',
@@ -89,8 +122,8 @@ async function main() {
     update: {},
     create: {
       codigoInterno: 'DEF-0001',
-      idPlacaOrigem: placa1.id,
-      classe: 'rachadura',
+      idPlaca: placa1.id,
+      classeDefeito: 'rachadura',
       nomeArquivoOrigem: 'seed-pcb-a001.png',
       tipo: 'rachadura',
       componente: 'Capacitor C10',
@@ -107,8 +140,8 @@ async function main() {
     update: {},
     create: {
       codigoInterno: 'DEF-0002',
-      idPlacaOrigem: placa2.id,
-      classe: 'oxidacao',
+      idPlaca: placa2.id,
+      classeDefeito: 'oxidacao',
       nomeArquivoOrigem: 'seed-pcb-b002.png',
       tipo: 'oxidacao',
       componente: 'Trilha de cobre',

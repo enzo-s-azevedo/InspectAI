@@ -10,6 +10,7 @@ export async function GET(request) {
   try {
     const placas = await prisma.placa.findMany({
       include: {
+        modelo: true,
         defeitos: {
           select: {
             id: true,
@@ -42,19 +43,33 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await readJson(request);
-    const { codigo, nome_classe, nomeClasse, descricao, localizacao } = body || {};
+    const { codigo, modelo, nome_classe, nomeClasse, descricao, localizacao } = body || {};
     const classeFinal = nome_classe || nomeClasse || codigo;
+    const modeloCodigo = String(modelo || codigo || classeFinal || '').trim();
 
-    if (!classeFinal) {
-      return fail('nome_classe da placa e obrigatorio', 400, 'VALIDATION_ERROR');
+    if (!classeFinal || !modeloCodigo) {
+      return fail('modelo e nome_classe da placa sao obrigatorios', 400, 'VALIDATION_ERROR');
     }
+
+    await prisma.modelo.upsert({
+      where: { codigo: modeloCodigo },
+      update: {},
+      create: {
+        codigo: modeloCodigo,
+        descricao: `Modelo ${modeloCodigo}`,
+      },
+    });
 
     const novaPlaca = await prisma.placa.create({
       data: {
         codigo: codigo || null,
+        modeloCodigo,
         nomeClasse: String(classeFinal),
         descricao,
         localizacao,
+      },
+      include: {
+        modelo: true,
       },
     });
 

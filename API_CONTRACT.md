@@ -114,6 +114,26 @@ Verifica o status de todos os serviços.
 
 ---
 
+### Modelos
+
+#### `GET /api/modelos`
+
+Retorna lista de modelos cadastrados e suas placas vinculadas.
+
+#### `POST /api/modelos`
+
+Cria um modelo de placa.
+
+**Payload de entrada:**
+```json
+{
+  "codigo": "PCB-A001-L1",
+  "descricao": "Modelo Placa Mae Linha A"
+}
+```
+
+---
+
 ### Placas
 
 #### `GET /api/placas`
@@ -126,8 +146,9 @@ Retorna lista de placas com seus defeitos vinculados.
   "success": true,
   "data": [
     {
-      "id": "cmoul70px0005ttzwz270a709",
+      "id": 1,
       "codigo": "PCB-C003-L3",
+      "modelo": "PCB-C003-L3",
       "nome_classe": "PCB-C003-L3",
       "descricao": "Power Supply Linha C",
       "localizacao": "Setor 03 - Prateleira 03",
@@ -149,6 +170,7 @@ Cria uma nova placa.
 ```json
 {
   "nome_classe": "PCB-D001-L1",
+  "modelo": "PCB-D001-L1",
   "codigo": "PCB-D001-L1",
   "descricao": "Placa de controle linha D",
   "localizacao": "Setor 04 - Prateleira 01"
@@ -181,11 +203,13 @@ Retorna lista de defeitos com placa e usuário vinculados.
   "success": true,
   "data": [
     {
-      "id": "cmoul70qf0009ttzwvifkq40m",
+      "id": 1,
       "classe": "oxidacao",
+      "classe_defeito": "oxidacao",
       "data_hora": "2026-05-06T21:46:10.935Z",
       "nome_arquivo_origem": "seed-pcb-b002.png",
-      "id_placa_origem": "cmoul70pr0004ttzwnxlcarqa",
+      "id_placa": 1,
+      "id_placa_origem": 1,
       "codigoInterno": "DEF-0002",
       "tipo": "oxidacao",
       "componente": "Trilha de cobre",
@@ -197,8 +221,9 @@ Retorna lista de defeitos com placa e usuário vinculados.
       "atualizado": "2026-05-06T21:46:10.935Z",
       "resolvido": null,
       "placa": {
-        "id": "cmoul70pr0004ttzwnxlcarqa",
+        "id": 1,
         "codigo": "PCB-B002-L2",
+        "modelo": "PCB-B002-L2",
         "descricao": "Controladora Linha B"
       },
       "usuario": {
@@ -244,10 +269,10 @@ Cria um defeito manualmente.
 **Payload de entrada:**
 ```json
 {
-  "classe": "oxidacao",
+  "classe_defeito": "oxidacao",
   "data_hora": "2026-05-06T21:46:10.935Z",
   "nome_arquivo_origem": "seed-pcb-b002.png",
-  "id_placa_origem": "cmoul70pr0004ttzwnxlcarqa"
+  "id_placa": 1
 }
 ```
 
