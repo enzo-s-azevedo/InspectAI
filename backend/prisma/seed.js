@@ -117,41 +117,53 @@ async function main() {
   console.log('✓ Placas criadas:', { placa1: placa1.codigo, placa2: placa2.codigo, placa3: placa3.codigo });
 
   // Criar defeitos de exemplo
-  const defeito1 = await prisma.defeito.upsert({
-    where: { codigoInterno: 'DEF-0001' },
-    update: {},
-    create: {
-      codigoInterno: 'DEF-0001',
+  let defeito1 = await prisma.defeito.findFirst({
+    where: {
       idPlaca: placa1.id,
       classeDefeito: 'rachadura',
       nomeArquivoOrigem: 'seed-pcb-a001.png',
-      componente: 'Capacitor C10',
-      origem: 'automatico',
-      severidade: 'media',
-      descricao: 'Rachadura detectada pelo YOLO',
-      confirmado: true,
-      usuarioId: inspetor.id,
     },
   });
 
-  const defeito2 = await prisma.defeito.upsert({
-    where: { codigoInterno: 'DEF-0002' },
-    update: {},
-    create: {
-      codigoInterno: 'DEF-0002',
+  if (!defeito1) {
+    defeito1 = await prisma.defeito.create({
+      data: {
+        idPlaca: placa1.id,
+        classeDefeito: 'rachadura',
+        nomeArquivoOrigem: 'seed-pcb-a001.png',
+        componente: 'Capacitor C10',
+        origem: 'automatico',
+        descricao: 'Rachadura detectada pelo YOLO',
+        confirmado: true,
+        usuarioId: inspetor.id,
+      },
+    });
+  }
+
+  let defeito2 = await prisma.defeito.findFirst({
+    where: {
       idPlaca: placa2.id,
       classeDefeito: 'oxidacao',
       nomeArquivoOrigem: 'seed-pcb-b002.png',
-      componente: 'Trilha de cobre',
-      origem: 'manual',
-      severidade: 'alta',
-      descricao: 'Oxidação visível na trilha',
-      confirmado: true,
-      usuarioId: inspetor.id,
     },
   });
 
-  console.log('✓ Defeitos criados:', { defeito1: defeito1.codigoInterno, defeito2: defeito2.codigoInterno });
+  if (!defeito2) {
+    defeito2 = await prisma.defeito.create({
+      data: {
+        idPlaca: placa2.id,
+        classeDefeito: 'oxidacao',
+        nomeArquivoOrigem: 'seed-pcb-b002.png',
+        componente: 'Trilha de cobre',
+        origem: 'manual',
+        descricao: 'Oxidação visível na trilha',
+        confirmado: true,
+        usuarioId: inspetor.id,
+      },
+    });
+  }
+
+  console.log('✓ Defeitos criados:', { defeito1: defeito1.id, defeito2: defeito2.id });
 
   // Criar relatório
   const relatorio = await prisma.relatorio.upsert({

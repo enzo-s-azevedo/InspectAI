@@ -12,7 +12,7 @@ export default function FeedVideo() {
       try {
         const defeitos = await api.getDefeitos()
         const mapped = defeitos.slice(0, 8).map((item, index) => ({
-          id: item.codigoInterno,
+          id: `#${item.id}`,
           classeDefeito: item.classe_defeito,
           tempo: String(index * 11).padStart(2, '0'),
         }))

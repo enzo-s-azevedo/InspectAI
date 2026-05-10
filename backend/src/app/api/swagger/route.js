@@ -276,7 +276,6 @@ export async function GET() {
           tags: ['Defeitos'],
           parameters: [
             { name: 'confirmado', in: 'query', description: 'Filtrar defeitos verdadeiros ou falsos positivos', schema: { type: 'boolean' } },
-            { name: 'severidade', in: 'query', description: 'Filtrar por severidade', schema: { type: 'string' } },
             { name: 'origem', in: 'query', description: 'Filtrar por origem', schema: { type: 'string' } },
             { name: 'classe_defeito', in: 'query', description: 'Filtrar por classe do defeito', schema: { type: 'string' } },
             { name: 'id_placa', in: 'query', description: 'Filtrar pelo ID numerico da placa', schema: { type: 'integer' } },

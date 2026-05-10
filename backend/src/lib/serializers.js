@@ -52,9 +52,7 @@ export function serializePlaca(placa) {
     defeitos: Array.isArray(placa.defeitos)
       ? placa.defeitos.map((defeito) => ({
           id: defeito.id,
-          codigoInterno: defeito.codigoInterno,
           classe_defeito: defeito.classeDefeito,
-          severidade: defeito.severidade,
           confirmado: defeito.confirmado,
         }))
       : undefined,
@@ -70,10 +68,8 @@ export function serializeDefeito(defeito) {
     data_hora: defeito.dataHora,
     nome_arquivo_origem: defeito.nomeArquivoOrigem,
     id_placa: defeito.idPlaca,
-    codigoInterno: defeito.codigoInterno,
     componente: defeito.componente,
     origem: defeito.origem,
-    severidade: defeito.severidade,
     descricao: defeito.descricao,
     confirmado: defeito.confirmado,
     criado: defeito.criado,
@@ -115,16 +111,8 @@ export function serializeDefeitoVideo(defeitoVideo) {
   return {
     id: defeitoVideo.id,
     defeito_id: defeitoVideo.defeitoId,
-    id_placa: defeitoVideo.idPlaca,
-    classe_defeito: defeitoVideo.classeDefeito,
     datahora: defeitoVideo.dataHora,
-    nome_arquivo_origem: defeitoVideo.nomeArquivoOrigem,
     frame: defeitoVideo.frame,
-    componente: defeitoVideo.componente,
-    origem: defeitoVideo.origem,
-    severidade: defeitoVideo.severidade,
-    descricao: defeitoVideo.descricao,
-    confirmado: defeitoVideo.confirmado,
     criado: defeitoVideo.criado,
     atualizado: defeitoVideo.atualizado,
   };

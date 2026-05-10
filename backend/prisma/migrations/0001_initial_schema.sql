@@ -46,14 +46,12 @@ CREATE TABLE IF NOT EXISTS placas (
 
 CREATE TABLE IF NOT EXISTS defeitos (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  codigoInterno VARCHAR(191) UNIQUE NOT NULL,
   id_placa INT NOT NULL,
   classe_defeito VARCHAR(191) NOT NULL DEFAULT 'defeito-nao-classificado',
   data_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   nome_arquivo_origem VARCHAR(500) NOT NULL DEFAULT 'desconhecido',
   componente VARCHAR(255),
   origem VARCHAR(50) NOT NULL DEFAULT 'manual',
-  severidade VARCHAR(50) DEFAULT 'media',
   descricao LONGTEXT,
   confirmado BOOLEAN NOT NULL DEFAULT TRUE,
   usuarioId VARCHAR(255),
@@ -64,8 +62,7 @@ CREATE TABLE IF NOT EXISTS defeitos (
   FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE SET NULL,
   INDEX idx_id_placa (id_placa),
   INDEX idx_usuarioId (usuarioId),
-  INDEX idx_criado (criado),
-  INDEX idx_codigoInterno (codigoInterno)
+  INDEX idx_criado (criado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS imagens_defeitos (
@@ -82,22 +79,12 @@ CREATE TABLE IF NOT EXISTS imagens_defeitos (
 CREATE TABLE IF NOT EXISTS defeitos_video (
   id INT AUTO_INCREMENT PRIMARY KEY,
   defeito_id INT NOT NULL,
-  id_placa INT NOT NULL,
-  classe_defeito VARCHAR(191) NOT NULL DEFAULT 'defeito-nao-classificado',
   datahora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  nome_arquivo_origem VARCHAR(500) NOT NULL DEFAULT 'desconhecido',
   frame INT,
-  componente VARCHAR(255),
-  origem VARCHAR(50) NOT NULL DEFAULT 'video',
-  severidade VARCHAR(50) DEFAULT 'media',
-  descricao LONGTEXT,
-  confirmado BOOLEAN NOT NULL DEFAULT TRUE,
   criado DATETIME DEFAULT CURRENT_TIMESTAMP,
   atualizado DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (defeito_id) REFERENCES defeitos(id) ON DELETE CASCADE,
-  FOREIGN KEY (id_placa) REFERENCES placas(id) ON DELETE CASCADE,
   INDEX idx_defeito_id (defeito_id),
-  INDEX idx_id_placa (id_placa),
   INDEX idx_datahora (datahora)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -202,7 +202,6 @@ Retorna lista de defeitos com placa e usuário vinculados.
 |-------|-----------|
 | `classe_defeito` | Filtra pela classe do defeito |
 | `confirmado` | Filtra defeitos verdadeiros (`true`) ou falsos positivos (`false`) |
-| `severidade` | Filtra por severidade |
 | `origem` | Filtra por origem |
 | `id_placa` | Filtra pelo ID numérico da placa |
 | `placaCodigo` | Filtra pelo código da placa |
@@ -219,10 +218,8 @@ Retorna lista de defeitos com placa e usuário vinculados.
       "nome_arquivo_origem": "seed-pcb-b002.png",
       "id_placa": 1,
       "confirmado": true,
-      "codigoInterno": "DEF-0002",
       "componente": "Trilha de cobre",
       "origem": "manual",
-      "severidade": "alta",
       "descricao": "Oxidação visível na trilha",
       "criado": "2026-05-06T21:46:10.935Z",
       "atualizado": "2026-05-06T21:46:10.935Z",
@@ -245,14 +242,6 @@ Retorna lista de defeitos com placa e usuário vinculados.
   "error": null
 }
 ```
-
-**Campos de severidade:**
-| Valor | Descrição |
-|-------|-----------|
-| `baixa` | Impacto mínimo |
-| `media` | Impacto moderado |
-| `alta` | Impacto significativo |
-| `critica` | Impacto crítico na placa |
 
 **Campos de origem:**
 | Valor | Descrição |

@@ -42,10 +42,9 @@ export default function DefeitosPage() {
   const filtered = defectList.filter(d => {
     const classeDefeito = getClasseDefeito(d)
     const matchSearch = search === '' ||
-      d.codigoInterno?.toLowerCase().includes(search.toLowerCase()) ||
+      String(d.id).includes(search) ||
       d.placa?.codigo?.toLowerCase().includes(search.toLowerCase()) ||
       classeDefeito.toLowerCase().includes(search.toLowerCase()) ||
-      d.severidade?.toLowerCase().includes(search.toLowerCase()) ||
       d.origem?.toLowerCase().includes(search.toLowerCase())
     return matchSearch
   })
@@ -90,7 +89,7 @@ export default function DefeitosPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por código, placa ou defeito..."
+            placeholder="Buscar por ID, placa ou defeito..."
             disabled={isLoading}
             className="bg-bg-card border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 w-64 placeholder:text-text-muted focus:border-amber outline-none transition-all duration-fast disabled:opacity-50"
           />
@@ -112,7 +111,7 @@ export default function DefeitosPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50">
-                {['Código', 'Placa', 'Classe do Defeito', 'Severidade', 'Origem', 'Confirmação', 'Data/Hora'].map(h => (
+                {['ID', 'Placa', 'Classe do Defeito', 'Origem', 'Confirmação', 'Data/Hora'].map(h => (
                   <th key={h} className="font-mono text-2xs text-text-muted uppercase tracking-label px-3 py-3 text-left">{h}</th>
                 ))}
               </tr>
@@ -121,20 +120,19 @@ export default function DefeitosPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/30 last:border-0">
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <td key={j} className="px-3 py-3"><div className="h-3 w-16 bg-bg-elevated animate-pulse rounded"></div></td>
                     ))}
                   </tr>
                 ))
               ) : error ? (
-                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
+                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
               ) : filtered.length > 0 ? (
                 filtered.map(d => (
                   <tr key={d.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
-                    <td className="px-3 py-3 font-mono text-xs text-amber">{d.codigoInterno}</td>
+                    <td className="px-3 py-3 font-mono text-xs text-amber">{d.id}</td>
                     <td className="px-3 py-3 font-mono text-xs text-text-secondary">{d.placa?.codigo || '-'}</td>
                     <td className="px-3 py-3 text-xs text-text-primary">{getClasseDefeito(d)}</td>
-                    <td className="px-3 py-3 text-xs text-text-secondary">{d.severidade}</td>
                     <td className="px-3 py-3 text-xs text-text-secondary">{d.origem}</td>
                     <td className="px-3 py-3">
                       <span className={`inline-flex rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase ${d.confirmado ? 'border-success-text/40 text-success-text bg-success-text/10' : 'border-critical-text/40 text-critical-text bg-critical-text/10'}`}>
@@ -145,7 +143,7 @@ export default function DefeitosPage() {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
+                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
               )}
             </tbody>
           </table>

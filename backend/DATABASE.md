@@ -31,14 +31,13 @@ Placas eletrônicas a serem inspecionadas.
 
 ### 3. **defeitos**
 Defeitos encontrados em placas (rachadura, oxidação, solda-fria, etc).
-- `id`: Identificador único (CUID)
-- `codigoInterno`: Código único interno (ex: `#DEF-0001`)
-- `placaId`: Referência à placa
-- `tipo`: Tipo de defeito
+- `id`: Identificador único numérico
+- `id_placa`: Referência à placa
+- `classe_defeito`: Classe do defeito detectado
+- `nome_arquivo_origem`: Arquivo/imagem de origem da detecção
 - `componente`: Componente afetado
 - `origem`: manual | automatico | importado
-- `severidade`: baixa | media | alta | critica
-- `status`: aberto | em-analise | resolvido | descartado
+- `confirmado`: verdadeiro por padrão; falso quando marcado como falso positivo
 - `usuarioId`: Inspetor responsável
 - `criado`, `atualizado`: Timestamps
 - `resolvido`: Data de resolução (opcional)

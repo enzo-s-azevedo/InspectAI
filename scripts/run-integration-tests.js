@@ -540,7 +540,6 @@ async function main() {
         classe_defeito: 'trilha-rompida',
         componente: 'R45',
         origem: 'manual',
-        severidade: 'media',
         descricao: 'Defeito criado por teste de integracao',
         usuarioId: ctx.userId,
       }),
