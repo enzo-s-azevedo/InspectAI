@@ -48,7 +48,7 @@ export default function AppShell({ children, breadcrumb }) {
                         <span className="text-amber group-open:rotate-180 transition-transform">▼</span>
                         </summary>
                         <div className="p-3 text-[11px] text-text-muted border-t border-border bg-bg-elevated/5 leading-relaxed">
-                        Para problemas de detecção ou erros de hardware, entre em contato direto com a engenharia através do ramal interno ou utilize o canal 0800 abaixo.
+                        Para problemas de detecção ou defeitos de hardware, entre em contato direto com a engenharia através do ramal interno ou utilize o canal 0800 abaixo.
                         </div>
                     </details>
                 </section>

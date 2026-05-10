@@ -197,6 +197,16 @@ Remove uma placa.
 
 Retorna lista de defeitos com placa e usuário vinculados.
 
+**Filtros aceitos:**
+| Campo | Descrição |
+|-------|-----------|
+| `classe_defeito` | Filtra pela classe do defeito |
+| `confirmado` | Filtra defeitos verdadeiros (`true`) ou falsos positivos (`false`) |
+| `severidade` | Filtra por severidade |
+| `origem` | Filtra por origem |
+| `id_placa` | Filtra pelo ID numérico da placa |
+| `placaCodigo` | Filtra pelo código da placa |
+
 **Resposta de sucesso `200`:**
 ```json
 {
@@ -204,19 +214,16 @@ Retorna lista de defeitos com placa e usuário vinculados.
   "data": [
     {
       "id": 1,
-      "classe": "oxidacao",
       "classe_defeito": "oxidacao",
       "data_hora": "2026-05-06T21:46:10.935Z",
       "nome_arquivo_origem": "seed-pcb-b002.png",
       "id_placa": 1,
-      "id_placa_origem": 1,
+      "confirmado": true,
       "codigoInterno": "DEF-0002",
-      "tipo": "oxidacao",
       "componente": "Trilha de cobre",
       "origem": "manual",
       "severidade": "alta",
       "descricao": "Oxidação visível na trilha",
-      "status": "em-analise",
       "criado": "2026-05-06T21:46:10.935Z",
       "atualizado": "2026-05-06T21:46:10.935Z",
       "resolvido": null,
@@ -238,14 +245,6 @@ Retorna lista de defeitos com placa e usuário vinculados.
   "error": null
 }
 ```
-
-**Campos de status possíveis:**
-| Valor | Significado |
-|-------|-------------|
-| `aberto` | Defeito detectado, aguardando análise |
-| `em-analise` | Em processo de avaliação |
-| `resolvido` | Defeito confirmado e tratado |
-| `descartado` | Marcado como falso positivo |
 
 **Campos de severidade:**
 | Valor | Descrição |
@@ -272,7 +271,8 @@ Cria um defeito manualmente.
   "classe_defeito": "oxidacao",
   "data_hora": "2026-05-06T21:46:10.935Z",
   "nome_arquivo_origem": "seed-pcb-b002.png",
-  "id_placa": 1
+  "id_placa": 1,
+  "confirmado": true
 }
 ```
 
@@ -412,7 +412,7 @@ Envia imagem para análise pelo modelo YOLO.
   "data": {
     "deteccoes": [
       {
-        "classe": "rachadura",
+        "classe_defeito": "rachadura",
         "confianca": 0.71,
         "bbox": [x, y, largura, altura]
       }
@@ -424,8 +424,6 @@ Envia imagem para análise pelo modelo YOLO.
   "error": null
 }
 ```
-
->  **Bug conhecido:** IA retorna detecções mas 0 são persistidas no banco de dados. A função `persistDetections()` não está sendo chamada corretamente.
 
 ---
 

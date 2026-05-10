@@ -73,13 +73,12 @@ model Defeito {
   classeDefeito String @default("defeito-nao-classificado") @map("classe_defeito")
   dataHora    DateTime @default(now()) @map("data_hora")
   nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
-  tipo        String?  // Compatibilidade com filtros/telas antigas
   componente  String?  // descrição do componente afetado
   origem      String   @default("manual") // manual, automatico, importado
   severidade  String   @default("media") // baixa, media, alta, critica
   descricao   String?  @db.Text
   
-  status      String   @default("aberto") // aberto, em-analise, resolvido, descartado
+  confirmado  Boolean  @default(true)
   usuarioId   String?
   usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   
@@ -95,7 +94,6 @@ model Defeito {
 
   @@index([idPlaca])
   @@index([usuarioId])
-  @@index([status])
   @@index([criado])
   @@map("defeitos")
 }
@@ -128,12 +126,11 @@ model DefeitoVideo {
   dataHora    DateTime @default(now()) @map("datahora")
   nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
   frame       Int?
-  tipo        String?
   componente  String?
   origem      String   @default("video")
   severidade  String   @default("media")
   descricao   String?  @db.Text
-  status      String   @default("aberto")
+  confirmado  Boolean  @default(true)
   criado      DateTime @default(now())
   atualizado  DateTime @updatedAt
 

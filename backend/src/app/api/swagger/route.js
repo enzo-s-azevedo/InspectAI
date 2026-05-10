@@ -275,8 +275,11 @@ export async function GET() {
           summary: 'Lista todos os defeitos registrados',
           tags: ['Defeitos'],
           parameters: [
-            { name: 'status', in: 'query', description: 'Filtrar por status', schema: { type: 'string' } },
+            { name: 'confirmado', in: 'query', description: 'Filtrar defeitos verdadeiros ou falsos positivos', schema: { type: 'boolean' } },
             { name: 'severidade', in: 'query', description: 'Filtrar por severidade', schema: { type: 'string' } },
+            { name: 'origem', in: 'query', description: 'Filtrar por origem', schema: { type: 'string' } },
+            { name: 'classe_defeito', in: 'query', description: 'Filtrar por classe do defeito', schema: { type: 'string' } },
+            { name: 'id_placa', in: 'query', description: 'Filtrar pelo ID numerico da placa', schema: { type: 'integer' } },
             { name: 'placaCodigo', in: 'query', description: 'Filtrar pelo código da placa', schema: { type: 'string' } }
           ],
           responses: {
@@ -289,11 +292,11 @@ export async function GET() {
                     data: [
                       { 
                         id: 1, 
-                        classe: 'oxidacao',
                         classe_defeito: 'oxidacao',
                         data_hora: '2026-05-06T21:46:10.935Z',
                         nome_arquivo_origem: 'upload.png',
                         id_placa: 1,
+                        confirmado: true,
                         placa: { codigo: 'PCB-A001-L1' }
                       }
                     ]
@@ -314,7 +317,8 @@ export async function GET() {
                   classe_defeito: 'rachadura',
                   data_hora: '2026-05-06T21:46:10.935Z',
                   nome_arquivo_origem: 'upload.png',
-                  id_placa: 1
+                  id_placa: 1,
+                  confirmado: true
                 }
               }
             }

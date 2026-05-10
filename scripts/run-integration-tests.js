@@ -536,13 +536,12 @@ async function main() {
       expectedStatus: 201,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        placaId: ctx.placaId,
-        tipo: 'trilha-rompida',
+        id_placa: ctx.placaId,
+        classe_defeito: 'trilha-rompida',
         componente: 'R45',
         origem: 'manual',
         severidade: 'media',
         descricao: 'Defeito criado por teste de integracao',
-        status: 'aberto',
         usuarioId: ctx.userId,
       }),
     });
@@ -551,6 +550,9 @@ async function main() {
     assert(res.json.success === true, 'POST /defeitos should return success=true');
     assert(res.json.data && res.json.data.id, 'POST /defeitos must return id');
     assert(res.json.data && res.json.data.placa && res.json.data.placa.id === ctx.placaId, 'Defeito must reference created placa');
+    assert(res.json.data.classe_defeito === 'trilha-rompida', 'Defeito deve expor classe_defeito padronizada');
+    assert(res.json.data.id_placa === ctx.placaId, 'Defeito deve expor id_placa padronizado');
+    assert(res.json.data.confirmado === true, 'Defeito criado deve ser confirmado por padrao');
     ctx.defeitoId = res.json.data.id;
     return `defeitoId=${ctx.defeitoId}`;
   });
@@ -679,12 +681,13 @@ async function main() {
     const combined = [...apiDetectionRes.json.data, ...zipDetectionRes.json.data];
     combined.forEach((item) => {
       assert(item.id, 'Defeito persistido precisa ter id');
-      assert(item.classe, 'Defeito persistido precisa ter classe');
+      assert(item.classe_defeito, 'Defeito persistido precisa ter classe_defeito');
+      assert(item.confirmado === true, 'Defeito persistido pela deteccao deve ser confirmado por padrao');
       assert(item.data_hora, 'Defeito persistido precisa ter data_hora');
       assert(item.nome_arquivo_origem, 'Defeito persistido precisa ter nome_arquivo_origem');
-      assert(item.id_placa_origem, 'Defeito persistido precisa ter id_placa_origem');
+      assert(item.id_placa, 'Defeito persistido precisa ter id_placa');
       assert(item.placa && item.placa.id, 'Defeito persistido precisa manter relacao com placa');
-      assert(item.id_placa_origem === item.placa.id, 'id_placa_origem deve ser igual ao id da placa relacionada');
+      assert(item.id_placa === item.placa.id, 'id_placa deve ser igual ao id da placa relacionada');
     });
 
     return `apiByPlaca=${apiDetectionRes.json.data.length} zipByPlaca=${zipDetectionRes.json.data.length} apiDetections=${ctx.apiDetectionCount} zipDetections=${ctx.zipDetectionCount}`;
@@ -700,6 +703,23 @@ async function main() {
     assert(Array.isArray(res.json.data), 'Filtered defeitos must be array');
     assert(res.json.data.some((item) => item.id === ctx.defeitoId), 'Created defeito must be found in filtered list');
     return `filteredCount=${res.json.data.length}`;
+  });
+
+  await runStep('Backend read created defeito by standardized filters', 'Backend/DB', async () => {
+    const query = new URLSearchParams({
+      classe_defeito: 'trilha-rompida',
+      id_placa: String(ctx.placaId),
+      confirmado: 'true',
+    });
+    const res = await request({
+      name: 'backend-defeitos-standard-filters',
+      url: `${BACKEND_BASE_URL}/defeitos?${query}`,
+    });
+
+    validateContract(res.json, 'GET /api/defeitos standardized filters');
+    assert(Array.isArray(res.json.data), 'Filtered defeitos by standardized filters must be array');
+    assert(res.json.data.some((item) => item.id === ctx.defeitoId), 'Created defeito must be found by classe_defeito/id_placa/confirmado');
+    return `standardFilteredCount=${res.json.data.length}`;
   });
 
   await runStep('Backend read created relatorio by usuarioId filter', 'Backend/DB', async () => {

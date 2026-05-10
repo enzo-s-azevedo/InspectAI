@@ -17,7 +17,6 @@ export async function GET(request, { params }) {
           id: true,
           codigoInterno: true,
           classeDefeito: true,
-          tipo: true,
           status: true,
           severidade: true,
         },

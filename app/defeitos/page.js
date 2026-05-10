@@ -2,34 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/AppShell'
-import Badge from '@/components/Badge'
 import { api } from '@/services/api'
 
-const tiposDefeito = ['Todos', 'rachadura', 'oxidacao', 'solda-fria', 'componente-ausente', 'desalinhamento']
-
-// Mapeia status do back para variante do Badge
-function getVariant(status) {
-  if (status === 'aberto') return 'critical'
-  if (status === 'em-analise') return 'warning'
-  if (status === 'resolvido') return 'success'
-  if (status === 'descartado') return 'neutral'
-  return 'neutral'
-}
-
-function getLabel(status) {
-  const map = {
-    'aberto': 'Aberto',
-    'em-analise': 'Em análise',
-    'resolvido': 'Resolvido',
-    'descartado': 'Falso Positivo',
-  }
-  return map[status] || status
+function getClasseDefeito(defeito) {
+  return defeito?.classe_defeito || ''
 }
 
 export default function DefeitosPage() {
-  const [tipoFiltro, setTipoFiltro] = useState('Todos')
+  const [classeFiltro, setClasseFiltro] = useState('Todos')
   const [search, setSearch] = useState('')
   const [defectList, setDefectList] = useState([])
+  const [availableClasses, setAvailableClasses] = useState(['Todos'])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -38,8 +21,15 @@ export default function DefeitosPage() {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await api.getDefeitos()
+        const params = classeFiltro === 'Todos' ? undefined : { classe_defeito: classeFiltro }
+        const data = await api.getDefeitos(params)
         setDefectList(data)
+        if (classeFiltro === 'Todos') {
+          setAvailableClasses([
+            'Todos',
+            ...Array.from(new Set(data.map(getClasseDefeito).filter(Boolean))).sort(),
+          ])
+        }
       } catch (err) {
         setError(err.message)
       } finally {
@@ -47,22 +37,23 @@ export default function DefeitosPage() {
       }
     }
     loadData()
-  }, [])
+  }, [classeFiltro])
 
   const filtered = defectList.filter(d => {
-    const matchTipo = tipoFiltro === 'Todos' || d.classe === tipoFiltro || d.tipo === tipoFiltro
+    const classeDefeito = getClasseDefeito(d)
     const matchSearch = search === '' ||
       d.codigoInterno?.toLowerCase().includes(search.toLowerCase()) ||
       d.placa?.codigo?.toLowerCase().includes(search.toLowerCase()) ||
-      d.classe?.toLowerCase().includes(search.toLowerCase()) ||
-      d.tipo?.toLowerCase().includes(search.toLowerCase())
-    return matchTipo && matchSearch
+      classeDefeito.toLowerCase().includes(search.toLowerCase()) ||
+      d.severidade?.toLowerCase().includes(search.toLowerCase()) ||
+      d.origem?.toLowerCase().includes(search.toLowerCase())
+    return matchSearch
   })
 
   const metrics = [
     { label: 'Total de Defeitos',  value: isLoading ? '-' : defectList.length, color: 'border-t-amber' },
-    { label: 'Erros',              value: isLoading ? '-' : defectList.filter(d => d.status === 'aberto' || d.status === 'em-analise').length, color: 'border-t-critical-text' },
-    { label: 'Falsos Positivos',   value: isLoading ? '-' : defectList.filter(d => d.status === 'descartado').length, color: 'border-t-neutral-text' },
+    { label: 'Confirmados',        value: isLoading ? '-' : defectList.filter(d => d.confirmado === true).length, color: 'border-t-critical-text' },
+    { label: 'Falsos Positivos',   value: isLoading ? '-' : defectList.filter(d => d.confirmado === false).length, color: 'border-t-neutral-text' },
   ]
 
   return (
@@ -99,17 +90,17 @@ export default function DefeitosPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por código, placa ou tipo..."
+            placeholder="Buscar por código, placa ou defeito..."
             disabled={isLoading}
             className="bg-bg-card border border-border text-text-primary font-sans text-xs rounded-md px-3 py-2 w-64 placeholder:text-text-muted focus:border-amber outline-none transition-all duration-fast disabled:opacity-50"
           />
           <div className="flex gap-1.5 flex-wrap">
-            {tiposDefeito.map(t => (
+            {availableClasses.map(t => (
               <button
                 key={t}
-                onClick={() => setTipoFiltro(t)}
+                onClick={() => setClasseFiltro(t)}
                 disabled={isLoading}
-                className={`px-3 py-1.5 rounded-md font-mono text-xs border transition-all duration-fast cursor-pointer disabled:opacity-50 ${tipoFiltro === t ? 'bg-amber text-black border-amber font-semibold' : 'border-border text-text-secondary hover:bg-bg-elevated'}`}
+                className={`px-3 py-1.5 rounded-md font-mono text-xs border transition-all duration-fast cursor-pointer disabled:opacity-50 ${classeFiltro === t ? 'bg-amber text-black border-amber font-semibold' : 'border-border text-text-secondary hover:bg-bg-elevated'}`}
               >
                 {t}
               </button>
@@ -121,7 +112,7 @@ export default function DefeitosPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50">
-                {['Código', 'Placa', 'Classe', 'Tipo', 'Severidade', 'Origem', 'Status', 'Data/Hora'].map(h => (
+                {['Código', 'Placa', 'Classe do Defeito', 'Severidade', 'Origem', 'Confirmação', 'Data/Hora'].map(h => (
                   <th key={h} className="font-mono text-2xs text-text-muted uppercase tracking-label px-3 py-3 text-left">{h}</th>
                 ))}
               </tr>
@@ -130,28 +121,31 @@ export default function DefeitosPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/30 last:border-0">
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-3 py-3"><div className="h-3 w-16 bg-bg-elevated animate-pulse rounded"></div></td>
                     ))}
                   </tr>
                 ))
               ) : error ? (
-                <tr><td colSpan={8} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
               ) : filtered.length > 0 ? (
                 filtered.map(d => (
                   <tr key={d.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
                     <td className="px-3 py-3 font-mono text-xs text-amber">{d.codigoInterno}</td>
                     <td className="px-3 py-3 font-mono text-xs text-text-secondary">{d.placa?.codigo || '-'}</td>
-                    <td className="px-3 py-3 text-xs text-text-primary">{d.classe}</td>
-                    <td className="px-3 py-3 text-xs text-text-secondary">{d.tipo}</td>
+                    <td className="px-3 py-3 text-xs text-text-primary">{getClasseDefeito(d)}</td>
                     <td className="px-3 py-3 text-xs text-text-secondary">{d.severidade}</td>
                     <td className="px-3 py-3 text-xs text-text-secondary">{d.origem}</td>
-                    <td className="px-3 py-3"><Badge variant={getVariant(d.status)}>{getLabel(d.status)}</Badge></td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase ${d.confirmado ? 'border-success-text/40 text-success-text bg-success-text/10' : 'border-critical-text/40 text-critical-text bg-critical-text/10'}`}>
+                        {d.confirmado ? 'Confirmado' : 'Falso positivo'}
+                      </span>
+                    </td>
                     <td className="px-3 py-3 font-mono text-xs text-text-muted">{new Date(d.data_hora || d.criado).toLocaleString('pt-BR')}</td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={8} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
               )}
             </tbody>
           </table>

@@ -67,7 +67,7 @@ export async function persistDetections({ detections, placa, imageName }) {
   const created = [];
 
   for (const item of detections) {
-    const tipo = String(item.label || 'defeito-nao-classificado');
+    const classeDefeito = String(item.label || 'defeito-nao-classificado');
     const confidence = Number(item.confidence || 0);
     const bbox = Array.isArray(item.bbox) ? item.bbox : null;
     const detectedAt = item.data_hora ? new Date(item.data_hora) : null;
@@ -79,28 +79,27 @@ export async function persistDetections({ detections, placa, imageName }) {
       data: {
         codigoInterno: buildDefectCode(),
         idPlaca: placa.id,
-        classeDefeito: tipo,
+        classeDefeito,
         dataHora,
         nomeArquivoOrigem: imageName || 'upload.jpg',
-        tipo,
         componente: imageName || 'imagem',
         origem: 'automatico',
         severidade,
         descricao: `Detectado por IA com confianca ${Math.round(confidence * 100)}%`,
-        status: 'aberto',
+        confirmado: true,
         ...(videoFrame !== null
           ? {
               videos: {
                 create: {
                   idPlaca: placa.id,
-                  classeDefeito: tipo,
+                  classeDefeito,
                   dataHora,
                   nomeArquivoOrigem: imageName || 'upload',
                   frame: Number.isInteger(videoFrame) ? videoFrame : null,
-                  tipo,
                   componente: imageName || 'video',
                   severidade,
                   descricao: `Detectado em video por IA com confianca ${Math.round(confidence * 100)}%`,
+                  confirmado: true,
                 },
               },
             }

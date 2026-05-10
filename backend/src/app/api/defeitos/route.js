@@ -5,15 +5,26 @@ import { serializeDefeito } from '@/lib/serializers';
 export async function GET(request) {
   try {
     const searchParams = parseQuery(request);
-    const status = searchParams.get('status');
     const severidade = searchParams.get('severidade');
     const origem = searchParams.get('origem');
+    const confirmado = searchParams.get('confirmado');
     const placaCodigo = searchParams.get('placaCodigo');
+    const idPlaca = searchParams.get('id_placa');
+    const classeDefeito = searchParams.get('classe_defeito');
 
     const where = {};
-    if (status) where.status = status;
     if (severidade) where.severidade = severidade;
     if (origem) where.origem = origem;
+    if (confirmado === 'true') where.confirmado = true;
+    if (confirmado === 'false') where.confirmado = false;
+    if (classeDefeito) where.classeDefeito = classeDefeito;
+    if (idPlaca) {
+      const placaIdNumber = Number(idPlaca);
+      if (!Number.isInteger(placaIdNumber)) {
+        return fail('id_placa invalido', 400, 'VALIDATION_ERROR');
+      }
+      where.idPlaca = placaIdNumber;
+    }
     if (placaCodigo) {
       where.placa = {
         codigo: placaCodigo,
@@ -52,24 +63,20 @@ export async function POST(request) {
   try {
     const body = await readJson(request);
     const {
-      placaId,
       id_placa,
-      id_placa_origem,
       classe_defeito,
-      classe,
       data_hora,
       nome_arquivo_origem,
-      tipo,
       componente,
       origem = 'manual',
       severidade = 'media',
       descricao,
-      status = 'aberto',
+      confirmado,
       usuarioId,
     } = body || {};
 
-    const placaOrigemId = Number(id_placa || id_placa_origem || placaId);
-    const classeFinal = classe_defeito || classe || tipo;
+    const placaOrigemId = Number(id_placa);
+    const classeFinal = classe_defeito;
     if (!Number.isInteger(placaOrigemId) || !classeFinal) {
       return fail('id_placa e classe_defeito sao obrigatorios', 400, 'VALIDATION_ERROR');
     }
@@ -77,6 +84,10 @@ export async function POST(request) {
     if (dataHora && Number.isNaN(dataHora.getTime())) {
       return fail('data_hora invalida', 400, 'VALIDATION_ERROR');
     }
+    const confirmadoFinal =
+      confirmado === undefined
+          ? true
+          : confirmado === true || confirmado === 'true';
 
     const created = await prisma.defeito.create({
       data: {
@@ -84,12 +95,11 @@ export async function POST(request) {
         classeDefeito: String(classeFinal),
         dataHora: dataHora || undefined,
         nomeArquivoOrigem: nome_arquivo_origem || componente || 'upload-manual',
-        tipo: String(classeFinal),
         componente: componente || nome_arquivo_origem || 'upload-manual',
         origem,
         severidade,
         descricao,
-        status,
+        confirmado: confirmadoFinal,
         usuarioId,
       },
       include: {
