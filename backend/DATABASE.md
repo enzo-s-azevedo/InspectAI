@@ -21,15 +21,23 @@ Armazena informações de usuários do sistema (admins, funcionários, inspetore
 - `status`: ativo | inativo
 - `criado`, `atualizado`: Timestamps
 
-### 2. **placas**
+### 2. **modelo**
+Modelos de placas usados como referência.
+- `codigo`: Código único do modelo e chave primária
+- `descricao`: Descrição do modelo
+- `criado`, `atualizado`: Timestamps
+
+### 3. **placas**
 Placas eletrônicas a serem inspecionadas.
-- `id`: Identificador único (CUID)
+- `id`: Identificador único numérico
 - `codigo`: Código único (ex: `PCB-A001-L1`)
+- `modelo`: Código do modelo vinculado
+- `nome_classe`: Classe/nome da placa usado pela aplicação
 - `descricao`: Descrição da placa
 - `localizacao`: Local de armazenamento
 - `criado`, `atualizado`: Timestamps
 
-### 3. **defeitos**
+### 4. **defeitos**
 Defeitos encontrados em placas (rachadura, oxidação, solda-fria, etc).
 - `id`: Identificador único numérico
 - `id_placa`: Referência à placa
@@ -42,7 +50,7 @@ Defeitos encontrados em placas (rachadura, oxidação, solda-fria, etc).
 - `criado`, `atualizado`: Timestamps
 - `resolvido`: Data de resolução (opcional)
 
-### 4. **imagens_defeitos**
+### 5. **imagens_defeitos**
 Imagens associadas aos defeitos.
 - `id`: Identificador único (CUID)
 - `defeitoId`: Referência ao defeito
@@ -50,7 +58,15 @@ Imagens associadas aos defeitos.
 - `tipo`: original | processada | anotada
 - `metadados`: JSON com EXIF, coordenadas, etc
 
-### 5. **inspecoes**
+### 6. **defeitos_video**
+Complemento para defeitos detectados em vídeo.
+- `id`: Identificador único numérico
+- `defeito_id`: Referência ao defeito
+- `datahora`: Data/hora do evento no vídeo
+- `frame`: Frame do vídeo, quando disponível
+- `criado`, `atualizado`: Timestamps
+
+### 7. **inspecoes**
 Registros de inspeções realizadas.
 - `id`: Identificador único (CUID)
 - `placaId`: Placa inspecionada
@@ -59,7 +75,7 @@ Registros de inspeções realizadas.
 - `status`: em-progresso | concluida | cancelada
 - `concluido`: Data de conclusão (opcional)
 
-### 6. **relatorios**
+### 8. **relatorios**
 Relatórios de inspeção e análise.
 - `id`: Identificador único (CUID)
 - `codigoInterno`: Código unico (ex: `REL-001`)
@@ -68,7 +84,7 @@ Relatórios de inspeção e análise.
 - `origem`: inspecao | analise-manual
 - `status`: rascunho | finalizado | arquivado
 
-### 7. **relatorios_defeitos**
+### 9. **relatorios_defeitos**
 Relação muitos-para-muitos entre relatórios e defeitos.
 
 ## 🚀 Instalação Rápida
@@ -76,7 +92,7 @@ Relação muitos-para-muitos entre relatórios e defeitos.
 ### 1. Instalar dependências
 ```bash
 cd backend
-npm install @prisma/client @prisma/cli mysql2 dotenv
+npm install
 ```
 
 ### 2. Configurar variáveis de ambiente
@@ -94,7 +110,7 @@ cp .env.example .env
 mysql -u user -p < prisma/migrations/0001_initial_schema.sql
 
 # Opção B: Usar Prisma
-npx prisma db push
+npm run db:push
 ```
 
 ### 4. Popular dados iniciais (desenvolvimento)
@@ -115,7 +131,7 @@ npm run db:migrate:deploy
 npm run db:studio
 
 # Recriar banco de dados (Desenvolvimento)
-npx prisma migrate reset
+npm run db:reset:push
 
 # Gerar tipos TypeScript (opcional)
 npx prisma generate
@@ -130,8 +146,9 @@ npx prisma migrate status
 
 ```javascript
 // src/app/api/defeitos/route.js
-import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { fail, ok } from '@/lib/http';
+import { serializeDefeito } from '@/lib/serializers';
 
 export async function GET(request) {
   try {
@@ -143,12 +160,9 @@ export async function GET(request) {
       },
     });
 
-    return NextResponse.json({ status: 'sucesso', data: defeitos });
+    return ok(defeitos.map(serializeDefeito), { total: defeitos.length });
   } catch (error) {
-    return NextResponse.json(
-      { status: 'erro', mensagem: error.message },
-      { status: 500 }
-    );
+    return fail(error.message);
   }
 }
 ```
@@ -157,18 +171,18 @@ export async function GET(request) {
 
 | Entidade | Padrão | Exemplo |
 |----------|--------|---------|
-| IDs | CUID | `cljf3xj2g0000qz0h0q0q0q0q` |
-| Códigos Internos - Defeitos | `DEF-XXXX` | `DEF-0001` |
+| IDs numéricos | auto-incremento | `1` |
+| IDs textuais | CUID | `cljf3xj2g0000qz0h0q0q0q0q` |
 | Códigos Internos - Relatórios | `REL-XXX` | `REL-024` |
 | Códigos de Placas | `PCB-AALLL-LX` | `PCB-A001-L1` |
 | Roles | kebab-case | `admin`, `funcionario`, `inspetor` |
-| Status | kebab-case | `aberto`, `em-analise`, `resolvido` |
+| Status de relatórios/inspeções | kebab-case | `rascunho`, `finalizado`, `em-progresso` |
 
 ## 🔐 Restrições de Integridade
 
 - **Usuários** não podem ser deletados se tiverem relatórios ou inspeções (RESTRICT)
 - **Placas** são deletadas em cascata com seus defeitos e inspeções
-- **Defeitos** são deletados em cascata com suas imagens
+- **Defeitos** são deletados em cascata com suas imagens e registros de vídeo
 - **Relatórios** são deletados em cascata com seus defeitos associados
 
 ## 🗑️ Fazer Reset Completo (Desenvolvimento)

@@ -27,7 +27,17 @@ export async function GET() {
               description: 'Servidor online',
               content: {
                 'application/json': {
-                  example: { status: 'ok', timestamp: '2026-05-04T12:00:00Z' }
+                  example: {
+                    success: true,
+                    data: {
+                      api: 'ok',
+                      database: 'ok',
+                      ai: { status: 'healthy', model_loaded: true },
+                      timestamp: '2026-05-04T12:00:00Z'
+                    },
+                    meta: {},
+                    error: null
+                  }
                 }
               }
             }
@@ -60,9 +70,31 @@ export async function GET() {
                 'application/json': {
                   example: {
                     success: true,
-                    detections: [
-                      { type: 'curto-circuito', confidence: 0.89, bbox: [10, 20, 50, 60] }
-                    ]
+                    data: {
+                      detections: [
+                        { label: 'curto-circuito', confidence: 0.89, bbox: [10, 20, 50, 60] }
+                      ],
+                      savedDefeitos: [
+                        {
+                          id: 1,
+                          classe_defeito: 'curto-circuito',
+                          data_hora: '2026-05-06T21:46:10.935Z',
+                          nome_arquivo_origem: 'upload.png',
+                          id_placa: 1,
+                          origem: 'automatico',
+                          confirmado: true
+                        }
+                      ],
+                      itens: []
+                    },
+                    meta: {
+                      inputType: 'image',
+                      selectedClasses: [],
+                      totalFiles: 1,
+                      totalDetections: 1,
+                      totalPersisted: 1
+                    },
+                    error: null
                   }
                 }
               }
@@ -87,10 +119,21 @@ export async function GET() {
               content: {
                 'application/json': {
                   example: {
-                    total: 2,
+                    success: true,
                     data: [
-                      { id: 'clx123abc0000', email: 'felipe@inspectai.com', nome: 'Felipe Salazar', papel: 'admin', status: 'ativo' }
-                    ]
+                      {
+                        id: 'clx123abc0000',
+                        nome: 'Felipe Salazar',
+                        email: 'felipe@inspectai.com',
+                        papel: 'admin',
+                        status: 'ativo',
+                        avatar: null,
+                        criado: '2026-05-06T21:46:10.892Z',
+                        atualizado: '2026-05-06T21:46:10.892Z'
+                      }
+                    ],
+                    meta: { total: 1 },
+                    error: null
                   }
                 }
               }
@@ -154,14 +197,20 @@ export async function GET() {
               content: {
                 'application/json': {
                   example: {
-                    total: 1,
+                    success: true,
                     data: [
                       {
                         codigo: 'PCB-A001-L1',
                         descricao: 'Modelo Placa Mae Linha A',
-                        placas: []
+                        criado: '2026-05-06T21:46:10.917Z',
+                        atualizado: '2026-05-06T21:46:10.917Z',
+                        placas: [
+                          { id: 1, codigo: 'PCB-A001-L1', nome_classe: 'PCB-A001-L1' }
+                        ]
                       }
-                    ]
+                    ],
+                    meta: { total: 1 },
+                    error: null
                   }
                 }
               }
@@ -201,16 +250,28 @@ export async function GET() {
               content: {
                 'application/json': {
                   example: {
-                    total: 1,
+                    success: true,
                     data: [
                       {
                         id: 1,
-                        codigo: 'PCB-AALLL-L1',
+                        codigo: 'PCB-A001-L1',
                         modelo: 'PCB-A001-L1',
-                        nome_classe: 'placa-mae-v2',
-                        defeitos: []
+                        modelo_dados: {
+                          codigo: 'PCB-A001-L1',
+                          descricao: 'Modelo Placa Mae Linha A'
+                        },
+                        nome_classe: 'PCB-A001-L1',
+                        descricao: 'Placa Mae Linha A',
+                        localizacao: 'Setor 01 - Prateleira 01',
+                        criado: '2026-05-06T21:46:10.917Z',
+                        atualizado: '2026-05-06T21:46:10.917Z',
+                        defeitos: [
+                          { id: 1, classe_defeito: 'rachadura', confirmado: true }
+                        ]
                       }
-                    ]
+                    ],
+                    meta: { total: 1 },
+                    error: null
                   }
                 }
               }
@@ -360,15 +421,27 @@ export async function GET() {
               content: {
                 'application/json': {
                   example: {
-                    total: 1,
+                    success: true,
                     data: [
                       {
                         id: 'clr123rel0001',
                         codigoInterno: 'REL-001',
-                        titulo: 'Relatório Diário',
-                        status: 'finalizado'
+                        titulo: 'Relatorio Diario',
+                        descricao: 'Inspecao de qualidade',
+                        origem: 'inspecao',
+                        status: 'finalizado',
+                        criado: '2026-05-06T21:46:10.945Z',
+                        atualizado: '2026-05-06T21:46:10.945Z',
+                        usuario: {
+                          id: 'cmoul70p10001ttzwmem9npoy',
+                          nome: 'Joao Silva',
+                          email: 'funcionario@inspectai.local'
+                        },
+                        defeitos: []
                       }
-                    ]
+                    ],
+                    meta: { total: 1 },
+                    error: null
                   }
                 }
               }
