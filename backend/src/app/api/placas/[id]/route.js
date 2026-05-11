@@ -15,10 +15,8 @@ export async function GET(request, { params }) {
       defeitos: {
         select: {
           id: true,
-          codigoInterno: true,
           classeDefeito: true,
-          status: true,
-          severidade: true,
+          confirmado: true,
         },
       },
     },

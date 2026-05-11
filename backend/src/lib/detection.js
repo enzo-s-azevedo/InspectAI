@@ -1,10 +1,5 @@
 import prisma from '@/lib/db';
 
-function buildDefectCode() {
-  const randomPart = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `DEF-${Date.now().toString().slice(-6)}-${randomPart}`;
-}
-
 async function ensureModelo(codigo, descricao) {
   return prisma.modelo.upsert({
     where: { codigo },
@@ -72,34 +67,24 @@ export async function persistDetections({ detections, placa, imageName }) {
     const bbox = Array.isArray(item.bbox) ? item.bbox : null;
     const detectedAt = item.data_hora ? new Date(item.data_hora) : null;
     const dataHora = detectedAt && !Number.isNaN(detectedAt.getTime()) ? detectedAt : undefined;
-    const severidade = confidence >= 0.9 ? 'alta' : confidence >= 0.7 ? 'media' : 'baixa';
     const videoFrame = item.frame !== undefined && item.frame !== null ? Number(item.frame) : null;
 
     const defeito = await prisma.defeito.create({
       data: {
-        codigoInterno: buildDefectCode(),
         idPlaca: placa.id,
         classeDefeito,
         dataHora,
         nomeArquivoOrigem: imageName || 'upload.jpg',
         componente: imageName || 'imagem',
         origem: 'automatico',
-        severidade,
         descricao: `Detectado por IA com confianca ${Math.round(confidence * 100)}%`,
         confirmado: true,
         ...(videoFrame !== null
           ? {
               videos: {
                 create: {
-                  idPlaca: placa.id,
-                  classeDefeito,
                   dataHora,
-                  nomeArquivoOrigem: imageName || 'upload',
                   frame: Number.isInteger(videoFrame) ? videoFrame : null,
-                  componente: imageName || 'video',
-                  severidade,
-                  descricao: `Detectado em video por IA com confianca ${Math.round(confidence * 100)}%`,
-                  confirmado: true,
                 },
               },
             }

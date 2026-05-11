@@ -5,7 +5,6 @@ import { serializeDefeito } from '@/lib/serializers';
 export async function GET(request) {
   try {
     const searchParams = parseQuery(request);
-    const severidade = searchParams.get('severidade');
     const origem = searchParams.get('origem');
     const confirmado = searchParams.get('confirmado');
     const placaCodigo = searchParams.get('placaCodigo');
@@ -13,7 +12,6 @@ export async function GET(request) {
     const classeDefeito = searchParams.get('classe_defeito');
 
     const where = {};
-    if (severidade) where.severidade = severidade;
     if (origem) where.origem = origem;
     if (confirmado === 'true') where.confirmado = true;
     if (confirmado === 'false') where.confirmado = false;
@@ -69,7 +67,6 @@ export async function POST(request) {
       nome_arquivo_origem,
       componente,
       origem = 'manual',
-      severidade = 'media',
       descricao,
       confirmado,
       usuarioId,
@@ -97,7 +94,6 @@ export async function POST(request) {
         nomeArquivoOrigem: nome_arquivo_origem || componente || 'upload-manual',
         componente: componente || nome_arquivo_origem || 'upload-manual',
         origem,
-        severidade,
         descricao,
         confirmado: confirmadoFinal,
         usuarioId,

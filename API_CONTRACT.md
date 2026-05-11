@@ -54,7 +54,7 @@ Todas as respostas do backend seguem o envelope:
 | `success` | boolean | `true` se a requisição foi bem-sucedida |
 | `data` | array ou object | Dados retornados |
 | `meta` | object | Metadados como total de registros |
-| `error` | string ou null | Mensagem de erro se houver |
+| `error` | object ou null | Objeto de erro se houver |
 
 ---
 
@@ -77,7 +77,11 @@ Todas as respostas do backend seguem o envelope:
   "success": false,
   "data": null,
   "meta": {},
-  "error": "Descrição do erro"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Descrição do erro",
+    "details": null
+  }
 }
 ```
 
@@ -202,7 +206,6 @@ Retorna lista de defeitos com placa e usuário vinculados.
 |-------|-----------|
 | `classe_defeito` | Filtra pela classe do defeito |
 | `confirmado` | Filtra defeitos verdadeiros (`true`) ou falsos positivos (`false`) |
-| `severidade` | Filtra por severidade |
 | `origem` | Filtra por origem |
 | `id_placa` | Filtra pelo ID numérico da placa |
 | `placaCodigo` | Filtra pelo código da placa |
@@ -219,10 +222,8 @@ Retorna lista de defeitos com placa e usuário vinculados.
       "nome_arquivo_origem": "seed-pcb-b002.png",
       "id_placa": 1,
       "confirmado": true,
-      "codigoInterno": "DEF-0002",
       "componente": "Trilha de cobre",
       "origem": "manual",
-      "severidade": "alta",
       "descricao": "Oxidação visível na trilha",
       "criado": "2026-05-06T21:46:10.935Z",
       "atualizado": "2026-05-06T21:46:10.935Z",
@@ -238,21 +239,14 @@ Retorna lista de defeitos com placa e usuário vinculados.
         "nome": "Maria Santos",
         "email": "inspetor@inspectai.local"
       },
-      "imagens": []
+      "imagens": [],
+      "videos": []
     }
   ],
   "meta": { "total": 2 },
   "error": null
 }
 ```
-
-**Campos de severidade:**
-| Valor | Descrição |
-|-------|-----------|
-| `baixa` | Impacto mínimo |
-| `media` | Impacto moderado |
-| `alta` | Impacto significativo |
-| `critica` | Impacto crítico na placa |
 
 **Campos de origem:**
 | Valor | Descrição |
@@ -327,7 +321,9 @@ Cria um novo relatório.
 {
   "titulo": "Inspeção Lote B-047",
   "descricao": "Relatório de inspeção do lote B-047",
-  "origem": "inspecao"
+  "usuarioId": "cmoul70p10001ttzwmem9npoy",
+  "origem": "inspecao",
+  "defeitoIds": [1]
 }
 ```
 
@@ -388,10 +384,6 @@ Atualiza um usuário existente.
 
 Remove um usuário.
 
->  **Bug conhecido:** `GET /api/usuarios/:id` retorna erro 500 — usa `prisma.placas` em vez de `prisma.usuario` (1 linha para corrigir)
-
----
-
 ### Detecção IA
 
 #### `POST /api/detection`
@@ -410,17 +402,33 @@ Envia imagem para análise pelo modelo YOLO.
 {
   "success": true,
   "data": {
-    "deteccoes": [
+    "detections": [
       {
-        "classe_defeito": "rachadura",
-        "confianca": 0.71,
-        "bbox": [x, y, largura, altura]
+        "label": "rachadura",
+        "confidence": 0.71,
+        "bbox": [10, 20, 50, 60]
       }
     ],
-    "total": 1,
-    "imagemProcessada": "url-da-imagem"
+    "savedDefeitos": [
+      {
+        "id": 1,
+        "classe_defeito": "rachadura",
+        "data_hora": "2026-05-06T21:46:10.935Z",
+        "nome_arquivo_origem": "upload.png",
+        "id_placa": 1,
+        "origem": "automatico",
+        "confirmado": true
+      }
+    ],
+    "itens": []
   },
-  "meta": {},
+  "meta": {
+    "inputType": "image",
+    "selectedClasses": [],
+    "totalFiles": 1,
+    "totalDetections": 1,
+    "totalPersisted": 1
+  },
   "error": null
 }
 ```
@@ -456,25 +464,12 @@ export const api = {
 | `/api/health` | GET |  OK | IA degraded (sem modelo .pt) |
 | `/api/placas` | GET |  OK | 3 registros retornados |
 | `/api/placas` | POST |  OK | - |
-| `/api/placas/:id` | GET |  Parcial | Pode ter issues |
+| `/api/placas/:id` | GET |  OK | - |
 | `/api/defeitos` | GET |  OK | 2 registros retornados |
 | `/api/defeitos` | POST |  OK | - |
 | `/api/relatorios` | GET |  OK | 1 registro retornado |
 | `/api/relatorios` | POST |  OK | - |
 | `/api/usuarios` | GET |  OK | 3 registros retornados |
 | `/api/usuarios` | POST |  OK | - |
-| `/api/usuarios/:id` | GET |  FAIL | Bug: usa `prisma.placas` em vez de `prisma.usuario` |
-| `/api/detection` | POST |  FAIL | IA detecta mas não persiste no banco |
-
----
-
-##  Bugs Identificados para o Time
-
-### Bug #1 — GET /api/usuarios/:id
-**Arquivo:** `backend/src/app/api/usuarios/[id]/route.js` linha 9  
-**Fix:** Trocar `prisma.placas` por `prisma.usuario`
-
-### Bug #2 — POST /api/detection não persiste
-**Arquivo:** `backend/src/app/api/detection/route.js`  
-**Sintoma:** IA retorna detecções mas banco recebe 0 defeitos  
-**Fix:** Verificar chamada da função `persistDetections()` e o fluxo de `resolvePlaca()`
+| `/api/usuarios/:id` | GET |  OK | - |
+| `/api/detection` | POST |  OK | Persiste defeitos quando a IA retorna detecções |

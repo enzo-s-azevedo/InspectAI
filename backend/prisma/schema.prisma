@@ -56,7 +56,6 @@ model Placa {
 
   // Relations
   defeitos       Defeito[]
-  defeitosVideo  DefeitoVideo[]
   inspecoes      Inspecao[]
 
   @@index([modeloCodigo])
@@ -66,7 +65,6 @@ model Placa {
 // ==================== DEFEITOS ====================
 model Defeito {
   id          Int      @id @default(autoincrement())
-  codigoInterno String  @unique @default(cuid()) // #DEF-XXXX
   idPlaca    Int      @map("id_placa")
   placa      Placa    @relation(fields: [idPlaca], references: [id], onDelete: Cascade)
   
@@ -75,7 +73,6 @@ model Defeito {
   nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
   componente  String?  // descrição do componente afetado
   origem      String   @default("manual") // manual, automatico, importado
-  severidade  String   @default("media") // baixa, media, alta, critica
   descricao   String?  @db.Text
   
   confirmado  Boolean  @default(true)
@@ -119,23 +116,13 @@ model DefeitoVideo {
   id          Int      @id @default(autoincrement())
   defeitoId   Int      @map("defeito_id")
   defeito     Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
-  idPlaca     Int      @map("id_placa")
-  placa       Placa    @relation(fields: [idPlaca], references: [id], onDelete: Cascade)
 
-  classeDefeito String @default("defeito-nao-classificado") @map("classe_defeito")
   dataHora    DateTime @default(now()) @map("datahora")
-  nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
   frame       Int?
-  componente  String?
-  origem      String   @default("video")
-  severidade  String   @default("media")
-  descricao   String?  @db.Text
-  confirmado  Boolean  @default(true)
   criado      DateTime @default(now())
   atualizado  DateTime @updatedAt
 
   @@index([defeitoId])
-  @@index([idPlaca])
   @@index([dataHora])
   @@map("defeitos_video")
 }
