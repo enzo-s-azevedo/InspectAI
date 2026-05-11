@@ -287,18 +287,38 @@ export async function GET() {
               content: {
                 'application/json': {
                   example: {
-                    total: 1,
+                    success: true,
                     data: [
-                      { 
-                        id: 1, 
+                      {
+                        id: 1,
                         classe_defeito: 'oxidacao',
                         data_hora: '2026-05-06T21:46:10.935Z',
                         nome_arquivo_origem: 'upload.png',
                         id_placa: 1,
+                        componente: 'Trilha de cobre',
+                        origem: 'manual',
+                        descricao: 'Oxidacao visivel na trilha',
                         confirmado: true,
-                        placa: { codigo: 'PCB-A001-L1' }
+                        criado: '2026-05-06T21:46:10.935Z',
+                        atualizado: '2026-05-06T21:46:10.935Z',
+                        resolvido: null,
+                        placa: {
+                          id: 1,
+                          codigo: 'PCB-A001-L1',
+                          modelo: 'PCB-A001-L1',
+                          descricao: 'Placa Mae Linha A'
+                        },
+                        usuario: {
+                          id: 'cmoul70p80002ttzwz3nk4vtt',
+                          nome: 'Maria Santos',
+                          email: 'inspetor@inspectai.local'
+                        },
+                        imagens: [],
+                        videos: []
                       }
-                    ]
+                    ],
+                    meta: { total: 1 },
+                    error: null
                   }
                 }
               }
