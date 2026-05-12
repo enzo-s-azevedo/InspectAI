@@ -1,30 +1,24 @@
 import prisma from '@/lib/db';
 
-async function ensureModelo(codigo, descricao) {
+async function ensureModelo(codigo) {
   return prisma.modelo.upsert({
     where: { codigo },
     update: {},
-    create: {
-      codigo,
-      descricao: descricao || `Modelo ${codigo}`,
-    },
+    create: { codigo },
   });
 }
 
 async function getOrCreateDefaultPlaca() {
   const codigo = 'PCB-AUTO-DEFAULT';
-  await ensureModelo(codigo, 'Modelo criado automaticamente para ingestao de deteccoes');
+  await ensureModelo(codigo);
 
-  return prisma.placa.upsert({
-    where: { codigo },
-    update: {},
-    create: {
-      codigo,
-      modeloCodigo: codigo,
-      nomeClasse: codigo,
-      descricao: 'Placa criada automaticamente para ingestao de deteccoes',
-      localizacao: 'Pipeline IA',
-    },
+  const existing = await prisma.placa.findFirst({
+    where: { modeloCodigo: codigo },
+  });
+  if (existing) return existing;
+
+  return prisma.placa.create({
+    data: { modeloCodigo: codigo },
   });
 }
 
@@ -36,25 +30,24 @@ export async function resolvePlaca({ placaId, placaCodigo }) {
   }
 
   if (placaCodigo) {
-    const byCode = await prisma.placa.findUnique({ where: { codigo: placaCodigo } });
-    if (byCode) return byCode;
+    const codigo = String(placaCodigo).trim();
+    if (codigo) {
+      await ensureModelo(codigo);
+      const existing = await prisma.placa.findFirst({
+        where: { modeloCodigo: codigo },
+      });
+      if (existing) return existing;
 
-    await ensureModelo(placaCodigo, 'Modelo criado automaticamente a partir da deteccao');
-    return prisma.placa.create({
-      data: {
-        codigo: placaCodigo,
-        modeloCodigo: placaCodigo,
-        nomeClasse: placaCodigo,
-        descricao: 'Placa criada automaticamente a partir da deteccao',
-        localizacao: 'Pipeline IA',
-      },
-    });
+      return prisma.placa.create({
+        data: { modeloCodigo: codigo },
+      });
+    }
   }
 
   return getOrCreateDefaultPlaca();
 }
 
-export async function persistDetections({ detections, placa, imageName }) {
+export async function persistDetections({ detections, placa, isVideo = false }) {
   if (!Array.isArray(detections) || detections.length === 0) {
     return [];
   }
@@ -63,53 +56,21 @@ export async function persistDetections({ detections, placa, imageName }) {
 
   for (const item of detections) {
     const classeDefeito = String(item.label || 'defeito-nao-classificado');
-    const confidence = Number(item.confidence || 0);
-    const bbox = Array.isArray(item.bbox) ? item.bbox : null;
-    const detectedAt = item.data_hora ? new Date(item.data_hora) : null;
-    const dataHora = detectedAt && !Number.isNaN(detectedAt.getTime()) ? detectedAt : undefined;
-    const videoFrame = item.frame !== undefined && item.frame !== null ? Number(item.frame) : null;
+    const hasVideoFrame = item.frame !== undefined && item.frame !== null;
+    const tipo = isVideo || hasVideoFrame ? 'video' : 'imagem';
 
     const defeito = await prisma.defeito.create({
       data: {
-        idPlaca: placa.id,
+        placaId: placa.id,
         classeDefeito,
-        dataHora,
-        nomeArquivoOrigem: imageName || 'upload.jpg',
-        componente: imageName || 'imagem',
-        origem: 'automatico',
-        descricao: `Detectado por IA com confianca ${Math.round(confidence * 100)}%`,
-        confirmado: true,
-        ...(videoFrame !== null
-          ? {
-              videos: {
-                create: {
-                  dataHora,
-                  frame: Number.isInteger(videoFrame) ? videoFrame : null,
-                },
-              },
-            }
-          : {}),
+        statusConfirmacao: 'confirmado',
+        tipo,
+        ...(tipo === 'imagem' ? { dataHora: null } : {}),
       },
       include: {
         placa: true,
-        usuario: true,
-        videos: true,
       },
     });
-
-    if (bbox) {
-      await prisma.imagemDefeito.create({
-        data: {
-          defeitoId: defeito.id,
-          url: imageName || 'upload',
-          tipo: 'anotada',
-          metadados: {
-            confidence,
-            bbox,
-          },
-        },
-      });
-    }
 
     created.push(defeito);
   }

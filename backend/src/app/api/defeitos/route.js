@@ -2,30 +2,50 @@ import prisma from '@/lib/db';
 import { fail, ok, parseQuery, readJson } from '@/lib/http';
 import { serializeDefeito } from '@/lib/serializers';
 
+const STATUS_CONFIRMATION_VALUES = new Set(['confirmado', 'falso_positivo']);
+const TIPO_VALUES = new Set(['imagem', 'video']);
+
+function normalizeStatusConfirmacao(value) {
+  const status = String(value || 'confirmado').trim();
+  return STATUS_CONFIRMATION_VALUES.has(status) ? status : null;
+}
+
+function normalizeTipo(value) {
+  const tipo = String(value || 'imagem').trim();
+  return TIPO_VALUES.has(tipo) ? tipo : null;
+}
+
 export async function GET(request) {
   try {
     const searchParams = parseQuery(request);
-    const origem = searchParams.get('origem');
-    const confirmado = searchParams.get('confirmado');
-    const placaCodigo = searchParams.get('placaCodigo');
-    const idPlaca = searchParams.get('id_placa');
+    const placaId = searchParams.get('placa_id') || searchParams.get('id_placa');
+    const modeloCodigo = searchParams.get('modelo_codigo') || searchParams.get('placaCodigo');
     const classeDefeito = searchParams.get('classe_defeito');
+    const statusConfirmacao = searchParams.get('status_confirmacao');
+    const tipo = searchParams.get('tipo');
 
     const where = {};
-    if (origem) where.origem = origem;
-    if (confirmado === 'true') where.confirmado = true;
-    if (confirmado === 'false') where.confirmado = false;
     if (classeDefeito) where.classeDefeito = classeDefeito;
-    if (idPlaca) {
-      const placaIdNumber = Number(idPlaca);
-      if (!Number.isInteger(placaIdNumber)) {
-        return fail('id_placa invalido', 400, 'VALIDATION_ERROR');
-      }
-      where.idPlaca = placaIdNumber;
+    if (tipo) {
+      const tipoFinal = normalizeTipo(tipo);
+      if (!tipoFinal) return fail('tipo invalido', 400, 'VALIDATION_ERROR');
+      where.tipo = tipoFinal;
     }
-    if (placaCodigo) {
+    if (statusConfirmacao) {
+      const status = normalizeStatusConfirmacao(statusConfirmacao);
+      if (!status) return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
+      where.statusConfirmacao = status;
+    }
+    if (placaId) {
+      const placaIdNumber = Number(placaId);
+      if (!Number.isInteger(placaIdNumber)) {
+        return fail('placa_id invalido', 400, 'VALIDATION_ERROR');
+      }
+      where.placaId = placaIdNumber;
+    }
+    if (modeloCodigo) {
       where.placa = {
-        codigo: placaCodigo,
+        modeloCodigo,
       };
     }
 
@@ -33,20 +53,9 @@ export async function GET(request) {
       where,
       include: {
         placa: true,
-        usuario: true,
-        imagens: {
-          orderBy: {
-            criado: 'desc',
-          },
-        },
-        videos: {
-          orderBy: {
-            dataHora: 'desc',
-          },
-        },
       },
       orderBy: {
-        criado: 'desc',
+        id: 'desc',
       },
     });
 
@@ -60,49 +69,37 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await readJson(request);
-    const {
-      id_placa,
-      classe_defeito,
-      data_hora,
-      nome_arquivo_origem,
-      componente,
-      origem = 'manual',
-      descricao,
-      confirmado,
-      usuarioId,
-    } = body || {};
+    const placaOrigemId = Number(body?.placa_id ?? body?.id_placa);
+    const classeFinal = body?.classe_defeito ?? null;
+    const statusConfirmacao = normalizeStatusConfirmacao(body?.status_confirmacao);
+    const tipo = normalizeTipo(body?.tipo);
 
-    const placaOrigemId = Number(id_placa);
-    const classeFinal = classe_defeito;
-    if (!Number.isInteger(placaOrigemId) || !classeFinal) {
-      return fail('id_placa e classe_defeito sao obrigatorios', 400, 'VALIDATION_ERROR');
+    if (!Number.isInteger(placaOrigemId)) {
+      return fail('placa_id e obrigatorio', 400, 'VALIDATION_ERROR');
     }
-    const dataHora = data_hora ? new Date(data_hora) : null;
+    if (!statusConfirmacao) {
+      return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
+    }
+    if (!tipo) {
+      return fail('tipo invalido', 400, 'VALIDATION_ERROR');
+    }
+
+    const dataHora = body?.data_hora ? new Date(body.data_hora) : null;
     if (dataHora && Number.isNaN(dataHora.getTime())) {
       return fail('data_hora invalida', 400, 'VALIDATION_ERROR');
     }
-    const confirmadoFinal =
-      confirmado === undefined
-          ? true
-          : confirmado === true || confirmado === 'true';
 
     const created = await prisma.defeito.create({
       data: {
-        idPlaca: placaOrigemId,
-        classeDefeito: String(classeFinal),
-        dataHora: dataHora || undefined,
-        nomeArquivoOrigem: nome_arquivo_origem || componente || 'upload-manual',
-        componente: componente || nome_arquivo_origem || 'upload-manual',
-        origem,
-        descricao,
-        confirmado: confirmadoFinal,
-        usuarioId,
+        placaId: placaOrigemId,
+        classeDefeito: classeFinal === null || classeFinal === undefined ? null : String(classeFinal),
+        statusConfirmacao,
+        tipo,
+        ...(tipo === 'imagem' ? { dataHora: null } : {}),
+        ...(tipo === 'video' && dataHora ? { dataHora } : {}),
       },
       include: {
         placa: true,
-        usuario: true,
-        imagens: true,
-        videos: true,
       },
     });
 
@@ -110,5 +107,36 @@ export async function POST(request) {
   } catch (error) {
     console.error('Erro ao criar defeito:', error);
     return fail('Erro ao criar defeito');
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const body = await readJson(request);
+    const id = Number(body?.id);
+    const statusConfirmacao = normalizeStatusConfirmacao(body?.status_confirmacao);
+
+    if (!Number.isInteger(id)) {
+      return fail('id do defeito e obrigatorio', 400, 'VALIDATION_ERROR');
+    }
+    if (!statusConfirmacao) {
+      return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
+    }
+
+    const updated = await prisma.defeito.update({
+      where: { id },
+      data: { statusConfirmacao },
+      include: {
+        placa: true,
+      },
+    });
+
+    return ok(serializeDefeito(updated));
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return fail('Defeito nao encontrado', 404, 'NOT_FOUND');
+    }
+    console.error('Erro ao atualizar defeito:', error);
+    return fail('Erro ao atualizar defeito');
   }
 }

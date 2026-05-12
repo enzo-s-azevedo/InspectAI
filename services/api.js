@@ -60,12 +60,11 @@ export const api = {
 
   // Dashboard (usa os endpoints existentes para montar as métricas)
   getDashboard: async () => {
-    const [defeitos, placas, usuarios] = await Promise.all([
+    const [defeitos, placas] = await Promise.all([
       request('/defeitos'),
       request('/placas'),
-      request('/usuarios'),
     ])
-    return { defeitos, placas, usuarios }
+    return { defeitos, placas }
   },
 
   // Placas
@@ -91,27 +90,11 @@ export const api = {
   criarDefeito: (body) =>
     requestBody('POST', '/defeitos', body),
 
+  atualizarDefeito: (body) =>
+    requestBody('PUT', '/defeitos', body),
+
   // Detecção por imagem (IA)
   analisarImagem: (formData) =>
     requestForm('/detection', formData),
 
-  // Relatórios
-  getRelatorios: () =>
-    request('/relatorios'),
-
-  criarRelatorio: (body) =>
-    requestBody('POST', '/relatorios', body),
-
-  // Usuários
-  getUsuarios: () =>
-    request('/usuarios'),
-
-  criarUsuario: (body) =>
-    requestBody('POST', '/usuarios', body),
-
-  editarUsuario: (id, body) =>
-    requestBody('PUT', `/usuarios/${id}`, body),
-
-  deletarUsuario: (id) =>
-    requestBody('DELETE', `/usuarios/${id}`),
 }

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,186 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== USUÁRIOS ====================
-model Usuario {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  nome      String
-  papel     String   @default("funcionario") // admin, funcionario, inspetor
-  status    String   @default("ativo") // ativo, inativo
-  avatar    String?
-  criado    DateTime @default(now())
-  atualizado DateTime @updatedAt
-
-  // Relations
-  defeitos       Defeito[]
-  relatorios     Relatorio[]
-  inspecoes      Inspecao[]
-
-  @@map("usuarios")
-}
-
-// ==================== MODELOS ====================
 model Modelo {
-  codigo     String   @id @db.VarChar(120)
-  descricao  String?
-  criado     DateTime @default(now())
-  atualizado DateTime @updatedAt
+  codigo String @id @db.VarChar(100)
 
-  // Relations
   placas Placa[]
 
   @@map("modelo")
 }
 
-// ==================== PLACAS ====================
 model Placa {
-  id          Int      @id @default(autoincrement())
-  codigo      String?  @unique // Compatibilidade com telas/consultas legadas
-  modeloCodigo String  @map("modelo") @db.VarChar(120)
-  modelo      Modelo   @relation(fields: [modeloCodigo], references: [codigo], onDelete: Restrict)
-  nomeClasse  String   @default("desconhecida") @map("nome_classe")
-  descricao   String?
-  localizacao String?
-  criado      DateTime @default(now())
-  atualizado  DateTime @updatedAt
+  id           Int    @id @default(autoincrement())
+  modeloCodigo String @map("modelo_codigo") @db.VarChar(100)
+  modelo       Modelo @relation(fields: [modeloCodigo], references: [codigo])
 
-  // Relations
-  defeitos       Defeito[]
-  inspecoes      Inspecao[]
+  defeitos Defeito[]
 
-  @@index([modeloCodigo])
-  @@map("placas")
+  @@index([modeloCodigo], map: "idx_placa_modelo_codigo")
+  @@map("placa")
 }
 
-// ==================== DEFEITOS ====================
 model Defeito {
-  id          Int      @id @default(autoincrement())
-  idPlaca    Int      @map("id_placa")
-  placa      Placa    @relation(fields: [idPlaca], references: [id], onDelete: Cascade)
-  
-  classeDefeito String @default("defeito-nao-classificado") @map("classe_defeito")
-  dataHora    DateTime @default(now()) @map("data_hora")
-  nomeArquivoOrigem String @default("desconhecido") @map("nome_arquivo_origem")
-  componente  String?  // descrição do componente afetado
-  origem      String   @default("manual") // manual, automatico, importado
-  descricao   String?  @db.Text
-  
-  confirmado  Boolean  @default(true)
-  usuarioId   String?
-  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  
-  criado      DateTime @default(now())
-  atualizado  DateTime @updatedAt
-  resolvido   DateTime?
+  id                Int    @id @default(autoincrement())
+  classeDefeito     String? @map("classe_defeito") @db.VarChar(255)
+  statusConfirmacao String @default("confirmado") @map("status_confirmacao") @db.VarChar(50)
+  tipo              String @default("imagem") @db.VarChar(50)
+  dataHora          DateTime? @default(now()) @map("data_hora") @db.Timestamp(0)
+  placaId           Int    @map("placa_id")
+  placa             Placa  @relation(fields: [placaId], references: [id])
 
-  // Relations
-  imagens     ImagemDefeito[]
-  inspecoes   Inspecao[]
-  relatorios  RelatorioDefeito[]
-  videos      DefeitoVideo[]
-
-  @@index([idPlaca])
-  @@index([usuarioId])
-  @@index([criado])
-  @@map("defeitos")
-}
-
-// ==================== IMAGENS ====================
-model ImagemDefeito {
-  id        String   @id @default(cuid())
-  defeitoId Int
-  defeito   Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
-  
-  url       String
-  tipo      String   @default("original") // original, processada, anotada
-  metadados Json?    // contém dados EXIF, coordenadas, etc
-  
-  criado    DateTime @default(now())
-
-  @@index([defeitoId])
-  @@map("imagens_defeitos")
-}
-
-// ==================== DEFEITOS EM VÍDEO ====================
-model DefeitoVideo {
-  id          Int      @id @default(autoincrement())
-  defeitoId   Int      @map("defeito_id")
-  defeito     Defeito  @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
-
-  dataHora    DateTime @default(now()) @map("datahora")
-  frame       Int?
-  criado      DateTime @default(now())
-  atualizado  DateTime @updatedAt
-
-  @@index([defeitoId])
-  @@index([dataHora])
-  @@map("defeitos_video")
-}
-
-// ==================== INSPEÇÕES ====================
-model Inspecao {
-  id        String   @id @default(cuid())
-  placaId   Int
-  placa     Placa    @relation(fields: [placaId], references: [id], onDelete: Cascade)
-  
-  usuarioId String
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  
-  tipo      String   @default("manual") // manual, automatizado, resumida
-  descricao String?  @db.Text
-  status    String   @default("em-progresso") // em-progresso, concluida, cancelada
-  
-  criado    DateTime @default(now())
-  concluido DateTime?
-  atualizado DateTime @updatedAt
-
-  // Relations
-  defeitos   Defeito[]
-
-  @@index([placaId])
-  @@index([usuarioId])
-  @@index([criado])
-  @@map("inspecoes")
-}
-
-// ==================== RELATÓRIOS ====================
-model Relatorio {
-  id        String   @id @default(cuid())
-  codigoInterno String @unique @default(cuid()) // REL-XXX
-  titulo    String
-  descricao String? @db.Text
-  
-  usuarioId String
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
-  
-  origem    String   @default("inspecao") // inspecao, analise-manual
-  status    String   @default("rascunho") // rascunho, finalizado, arquivado
-  
-  criado    DateTime @default(now())
-  atualizado DateTime @updatedAt
-
-  // Relations
-  defeitos  RelatorioDefeito[]
-
-  @@index([usuarioId])
-  @@index([criado])
-  @@map("relatorios")
-}
-
-// ==================== RELAÇÃO MUITOS-PARA-MUITOS ====================
-model RelatorioDefeito {
-  id        String @id @default(cuid())
-  relatorioId String
-  relatorio Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
-  
-  defeitoId Int
-  defeito   Defeito   @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
-  
-  notas     String? @db.Text
-  criado    DateTime @default(now())
-
-  @@unique([relatorioId, defeitoId])
-  @@index([defeitoId])
-  @@map("relatorios_defeitos")
+  @@index([placaId], map: "idx_defeito_placa_id")
+  @@index([statusConfirmacao], map: "idx_defeito_status_confirmacao")
+  @@index([tipo], map: "idx_defeito_tipo")
+  @@map("defeito")
 }

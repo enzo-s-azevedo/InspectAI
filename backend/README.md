@@ -1,43 +1,24 @@
 # InspectAI Backend
 
-Backend Next.js com Prisma para gerenciar usuarios, placas, defeitos, relatorios e pipeline de deteccao com IA.
+Backend Next.js com Prisma e MySQL usando apenas o schema oficial:
 
-## Endpoints
+`modelo -> placa -> defeito`
 
-- GET, POST /api/usuarios
-- GET, POST /api/placas
-- GET, POST /api/defeitos
-- GET, POST /api/relatorios
-- GET, POST /api/detection
-- GET /api/health
-
-## Ambiente
-
-Variaveis:
-
-- DATABASE_URL=mysql://root:root_password@db:3306/inspectai
-- AI_SERVICE_URL=http://ai:5000
-
-## Desenvolvimento local
+## Startup em Docker
 
 ```bash
-npm install
-npm run dev
+npm run db:migrate:deploy
+npm run start
 ```
 
-## Producao (container)
+O container executa essa sequência automaticamente via `backend/Dockerfile`.
 
-O container executa:
+## Prisma
 
-1. prisma migrate deploy
-2. prisma seed
-3. next start
+```bash
+npx prisma validate
+npx prisma generate
+npm run db:migrate:deploy
+```
 
-## Contrato de resposta
-
-Todas as rotas usam envelope padronizado com campos:
-
-- success
-- data
-- meta
-- error
+O fluxo oficial de banco é exclusivamente por migration.

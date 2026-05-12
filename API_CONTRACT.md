@@ -1,475 +1,122 @@
-#  Contrato de API — InspectAI
+# InspectAI API Contract
 
-> **Responsável:** José Leandro Correa Trivelato  
-> **Sprint:** 2  
-> **Versão:** 1.1.0  
-> **Base URL Backend:** `http://localhost:3001/api`  
-> **Base URL via Proxy (Docker):** `/backend-api`  
-> **Validado em:** 06/05/2026
+Contrato atual baseado no schema oficial minimalista.
 
----
+## Response Envelope
 
-##  Sumário
-
-- [Arquitetura](#arquitetura)
-- [Padrão de Resposta](#padrão-de-resposta)
-- [Códigos de Status HTTP](#códigos-de-status-http)
-- [Padrão de Erros](#padrão-de-erros)
-- [Rotas Validadas](#rotas-validadas)
-  - [Health](#health)
-  - [Placas](#placas)
-  - [Defeitos](#defeitos)
-  - [Relatórios](#relatórios)
-  - [Usuários](#usuários)
-  - [Detecção IA](#detecção-ia)
-
----
-
-## Arquitetura
-
-```
-Frontend (porta 3000)
-    └── /backend-api/* → proxy → Backend (porta 3001) /api/*
-                                      └── MySQL (porta 3307)
-                                      └── IA Flask/YOLO (porta 5005)
-```
-
----
-
-## Padrão de Resposta
-
-Todas as respostas do backend seguem o envelope:
+Todas as rotas JSON retornam:
 
 ```json
 {
   "success": true,
-  "data": [...],
-  "meta": { "total": 3 },
-  "error": null
-}
-```
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `success` | boolean | `true` se a requisição foi bem-sucedida |
-| `data` | array ou object | Dados retornados |
-| `meta` | object | Metadados como total de registros |
-| `error` | object ou null | Objeto de erro se houver |
-
----
-
-## Códigos de Status HTTP
-
-| Código | Significado | Quando usar |
-|--------|-------------|-------------|
-| `200` | OK | Requisição bem-sucedida |
-| `201` | Created | Recurso criado com sucesso |
-| `400` | Bad Request | Dados inválidos ou ausentes |
-| `404` | Not Found | Recurso não encontrado |
-| `500` | Internal Server Error | Erro interno do servidor |
-
----
-
-## Padrão de Erros
-
-```json
-{
-  "success": false,
-  "data": null,
-  "meta": {},
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Descrição do erro",
-    "details": null
-  }
-}
-```
-
----
-
-## Rotas Validadas
-
-### Health
-
-#### `GET /api/health`
-
-Verifica o status de todos os serviços.
-
-**Resposta de sucesso `200`:**
-```json
-{
-  "success": true,
-  "data": {
-    "api": "ok",
-    "database": "ok",
-    "ai": {
-      "error": "Modelo indisponivel: Nenhum modelo .pt encontrado",
-      "model": null,
-      "model_loaded": false,
-      "status": "degraded"
-    }
-  },
+  "data": {},
   "meta": {},
   "error": null
 }
 ```
 
->  **Status atual:** IA degraded — arquivo `best.pt` não encontrado na pasta `yolo/`
+## Rotas
 
----
+### `GET /api/health`
 
-### Modelos
+Valida backend, banco e serviço de IA.
 
-#### `GET /api/modelos`
+### `GET /api/modelos`
 
-Retorna lista de modelos cadastrados e suas placas vinculadas.
+Lista modelos.
 
-#### `POST /api/modelos`
+### `POST /api/modelos`
 
-Cria um modelo de placa.
+Body:
 
-**Payload de entrada:**
+```json
+{ "codigo": "PCB-A001-L1" }
+```
+
+### `GET /api/placas`
+
+Lista placas com modelo e defeitos vinculados.
+
+### `POST /api/placas`
+
+Body:
+
+```json
+{ "modelo_codigo": "PCB-A001-L1" }
+```
+
+### `GET /api/placas/:id`
+
+Busca uma placa.
+
+### `PUT /api/placas/:id`
+
+Body:
+
+```json
+{ "modelo_codigo": "PCB-B002-L2" }
+```
+
+### `DELETE /api/placas/:id`
+
+Remove placa sem defeitos vinculados.
+
+### `GET /api/defeitos`
+
+Filtros:
+
+- `placa_id`
+- `id_placa`
+- `modelo_codigo`
+- `placaCodigo`
+- `classe_defeito`
+
+### `POST /api/defeitos`
+
+Body mínimo:
+
 ```json
 {
-  "codigo": "PCB-A001-L1",
-  "descricao": "Modelo Placa Mae Linha A"
+  "placa_id": 1,
+  "classe_defeito": "solda-fria",
+  "status_confirmacao": "confirmado"
 }
 ```
 
----
+Com vídeo:
 
-### Placas
-
-#### `GET /api/placas`
-
-Retorna lista de placas com seus defeitos vinculados.
-
-**Resposta de sucesso `200`:**
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "codigo": "PCB-C003-L3",
-      "modelo": "PCB-C003-L3",
-      "nome_classe": "PCB-C003-L3",
-      "descricao": "Power Supply Linha C",
-      "localizacao": "Setor 03 - Prateleira 03",
-      "criado": "2026-05-06T21:46:10.917Z",
-      "atualizado": "2026-05-06T21:46:10.917Z",
-      "defeitos": []
-    }
-  ],
-  "meta": { "total": 3 },
-  "error": null
+  "placa_id": 1,
+  "classe_defeito": "solda-fria",
+  "status_confirmacao": "confirmado",
+  "tipo": "video"
 }
 ```
 
-#### `POST /api/placas`
+Para `tipo: "imagem"`, `data_hora` é salvo como `null`. Para `tipo: "video"`, o MySQL preenche `data_hora` com `CURRENT_TIMESTAMP` quando o campo não é informado.
 
-Cria uma nova placa.
+Valores aceitos para `status_confirmacao`:
 
-**Payload de entrada:**
+- `confirmado`
+- `falso_positivo`
+
+### `PUT /api/defeitos`
+
+Atualiza a confirmação do defeito.
+
 ```json
 {
-  "nome_classe": "PCB-D001-L1",
-  "modelo": "PCB-D001-L1",
-  "codigo": "PCB-D001-L1",
-  "descricao": "Placa de controle linha D",
-  "localizacao": "Setor 04 - Prateleira 01"
+  "id": 1,
+  "status_confirmacao": "falso_positivo"
 }
 ```
 
-#### `GET /api/placas/:id`
+### `POST /api/detection`
 
-Retorna detalhes de uma placa específica.
+Multipart:
 
-#### `PUT /api/placas/:id`
-
-Atualiza uma placa.
-
-#### `DELETE /api/placas/:id`
-
-Remove uma placa.
-
----
-
-### Defeitos
-
-#### `GET /api/defeitos`
-
-Retorna lista de defeitos com placa e usuário vinculados.
-
-**Filtros aceitos:**
-| Campo | Descrição |
-|-------|-----------|
-| `classe_defeito` | Filtra pela classe do defeito |
-| `confirmado` | Filtra defeitos verdadeiros (`true`) ou falsos positivos (`false`) |
-| `origem` | Filtra por origem |
-| `id_placa` | Filtra pelo ID numérico da placa |
-| `placaCodigo` | Filtra pelo código da placa |
-
-**Resposta de sucesso `200`:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "classe_defeito": "oxidacao",
-      "data_hora": "2026-05-06T21:46:10.935Z",
-      "nome_arquivo_origem": "seed-pcb-b002.png",
-      "id_placa": 1,
-      "confirmado": true,
-      "componente": "Trilha de cobre",
-      "origem": "manual",
-      "descricao": "Oxidação visível na trilha",
-      "criado": "2026-05-06T21:46:10.935Z",
-      "atualizado": "2026-05-06T21:46:10.935Z",
-      "resolvido": null,
-      "placa": {
-        "id": 1,
-        "codigo": "PCB-B002-L2",
-        "modelo": "PCB-B002-L2",
-        "descricao": "Controladora Linha B"
-      },
-      "usuario": {
-        "id": "cmoul70p80002ttzwz3nk4vtt",
-        "nome": "Maria Santos",
-        "email": "inspetor@inspectai.local"
-      },
-      "imagens": [],
-      "videos": []
-    }
-  ],
-  "meta": { "total": 2 },
-  "error": null
-}
-```
-
-**Campos de origem:**
-| Valor | Descrição |
-|-------|-----------|
-| `manual` | Inserido manualmente |
-| `automatico` | Detectado pela IA |
-| `importado` | Importado de arquivo externo |
-
-#### `POST /api/defeitos`
-
-Cria um defeito manualmente.
-
-**Payload de entrada:**
-```json
-{
-  "classe_defeito": "oxidacao",
-  "data_hora": "2026-05-06T21:46:10.935Z",
-  "nome_arquivo_origem": "seed-pcb-b002.png",
-  "id_placa": 1,
-  "confirmado": true
-}
-```
-
----
-
-### Relatórios
-
-#### `GET /api/relatorios`
-
-Retorna lista de relatórios com defeitos vinculados.
-
-**Resposta de sucesso `200`:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "cmoul70qp000bttzwpz5v1rgt",
-      "codigoInterno": "REL-001",
-      "titulo": "Inspeção PCB-A001-L1 - Abril 2026",
-      "descricao": "Inspeção de qualidade realizada em 09/04/2026",
-      "origem": "inspecao",
-      "status": "finalizado",
-      "criado": "2026-05-06T21:46:10.945Z",
-      "atualizado": "2026-05-06T21:46:10.945Z",
-      "usuario": {
-        "id": "cmoul70p10001ttzwmem9npoy",
-        "nome": "João Silva",
-        "email": "funcionario@inspectai.local"
-      },
-      "defeitos": [...]
-    }
-  ],
-  "meta": { "total": 1 },
-  "error": null
-}
-```
-
-**Campos de status:**
-| Valor | Descrição |
-|-------|-----------|
-| `rascunho` | Em elaboração |
-| `finalizado` | Concluído |
-| `arquivado` | Arquivado |
-
-#### `POST /api/relatorios`
-
-Cria um novo relatório.
-
-**Payload de entrada:**
-```json
-{
-  "titulo": "Inspeção Lote B-047",
-  "descricao": "Relatório de inspeção do lote B-047",
-  "usuarioId": "cmoul70p10001ttzwmem9npoy",
-  "origem": "inspecao",
-  "defeitoIds": [1]
-}
-```
-
----
-
-### Usuários
-
-#### `GET /api/usuarios`
-
-Retorna lista de usuários cadastrados.
-
-**Resposta de sucesso `200`:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "cmoul70p80002ttzwz3nk4vtt",
-      "nome": "Maria Santos",
-      "email": "inspetor@inspectai.local",
-      "papel": "inspetor",
-      "status": "ativo",
-      "avatar": null,
-      "criado": "2026-05-06T21:46:10.892Z",
-      "atualizado": "2026-05-06T21:46:10.892Z"
-    }
-  ],
-  "meta": { "total": 3 },
-  "error": null
-}
-```
-
-**Papéis disponíveis:**
-| Valor | Descrição |
-|-------|-----------|
-| `admin` | Acesso total ao sistema |
-| `funcionario` | Acesso padrão |
-| `inspetor` | Acesso de inspeção |
-
-#### `POST /api/usuarios`
-
-Cria um novo usuário.
-
-**Payload de entrada:**
-```json
-{
-  "nome": "João da Silva",
-  "email": "joao@inspectai.local",
-  "papel": "funcionario"
-}
-```
-
-#### `PUT /api/usuarios/:id`
-
-Atualiza um usuário existente.
-
-#### `DELETE /api/usuarios/:id`
-
-Remove um usuário.
-
-### Detecção IA
-
-#### `POST /api/detection`
-
-Envia imagem para análise pelo modelo YOLO.
-
-**Payload de entrada (`multipart/form-data`):**
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `file` | file | Imagem JPG, PNG, ZIP ou vídeo |
-| `placaCodigo` | string | Código da placa (ex: `PCB-A001-L1`) |
-| `classes` | string | Classes a filtrar (opcional, JSON array ou lista separada por vírgula) |
-
-**Resposta de sucesso `200`:**
-```json
-{
-  "success": true,
-  "data": {
-    "detections": [
-      {
-        "label": "rachadura",
-        "confidence": 0.71,
-        "bbox": [10, 20, 50, 60]
-      }
-    ],
-    "savedDefeitos": [
-      {
-        "id": 1,
-        "classe_defeito": "rachadura",
-        "data_hora": "2026-05-06T21:46:10.935Z",
-        "nome_arquivo_origem": "upload.png",
-        "id_placa": 1,
-        "origem": "automatico",
-        "confirmado": true
-      }
-    ],
-    "itens": []
-  },
-  "meta": {
-    "inputType": "image",
-    "selectedClasses": [],
-    "totalFiles": 1,
-    "totalDetections": 1,
-    "totalPersisted": 1
-  },
-  "error": null
-}
-```
-
----
-
-## 🔗 Alinhamento Frontend — services/api.js
-
-```javascript
-const BASE_URL = '/backend-api'
-
-export const api = {
-  getHealth:       () => request('/health'),
-  getPlacas:       () => request('/placas'),
-  getDefeitos:     (params) => request(`/defeitos${params ? `?${new URLSearchParams(params)}` : ''}`),
-  criarDefeito:    (body) => requestBody('POST', '/defeitos', body),
-  analisarImagem:  (formData) => requestForm('/detection', formData),
-  getRelatorios:   () => request('/relatorios'),
-  criarRelatorio:  (body) => requestBody('POST', '/relatorios', body),
-  getUsuarios:     () => request('/usuarios'),
-  criarUsuario:    (body) => requestBody('POST', '/usuarios', body),
-  editarUsuario:   (id, body) => requestBody('PUT', `/usuarios/${id}`, body),
-  deletarUsuario:  (id) => requestBody('DELETE', `/usuarios/${id}`),
-}
-```
-
----
-
-##  Status de Validação
-
-| Rota | Método | Status | Observação |
-|------|--------|--------|------------|
-| `/api/health` | GET |  OK | IA degraded (sem modelo .pt) |
-| `/api/placas` | GET |  OK | 3 registros retornados |
-| `/api/placas` | POST |  OK | - |
-| `/api/placas/:id` | GET |  OK | - |
-| `/api/defeitos` | GET |  OK | 2 registros retornados |
-| `/api/defeitos` | POST |  OK | - |
-| `/api/relatorios` | GET |  OK | 1 registro retornado |
-| `/api/relatorios` | POST |  OK | - |
-| `/api/usuarios` | GET |  OK | 3 registros retornados |
-| `/api/usuarios` | POST |  OK | - |
-| `/api/usuarios/:id` | GET |  OK | - |
-| `/api/detection` | POST |  OK | Persiste defeitos quando a IA retorna detecções |
+- `file`: imagem, ZIP ou vídeo
+- `placaId`: opcional
+- `placaCodigo`: opcional, usado como `modelo.codigo`
+- `classes`: opcional

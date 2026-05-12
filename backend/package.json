@@ -8,13 +8,9 @@
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push",
-    "db:push:force": "prisma db push --accept-data-loss",
-    "db:reset:push": "prisma db push --force-reset --accept-data-loss",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js"
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",

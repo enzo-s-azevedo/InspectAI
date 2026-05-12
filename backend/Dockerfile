@@ -27,4 +27,4 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app .
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run db:push && npm run db:seed && npm run start"]
+CMD ["sh", "-c", "npm run db:migrate:deploy && npm run start"]
