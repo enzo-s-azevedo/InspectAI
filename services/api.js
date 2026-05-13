@@ -58,13 +58,21 @@ export const api = {
   getHealth: () =>
     request('/health'),
 
+  // Modelos
+  getModelos: () =>
+    request('/modelos'),
+
+  criarModelo: (body) =>
+    requestBody('POST', '/modelos', body),
+
   // Dashboard (usa os endpoints existentes para montar as métricas)
   getDashboard: async () => {
-    const [defeitos, placas] = await Promise.all([
+    const [defeitos, placas, modelos] = await Promise.all([
       request('/defeitos'),
       request('/placas'),
+      request('/modelos'),
     ])
-    return { defeitos, placas }
+    return { defeitos, placas, modelos }
   },
 
   // Placas
@@ -96,5 +104,8 @@ export const api = {
   // Detecção por imagem (IA)
   analisarImagem: (formData) =>
     requestForm('/detection', formData),
+
+  salvarDeteccoes: (body) =>
+    requestBody('POST', '/detection/save', body),
 
 }

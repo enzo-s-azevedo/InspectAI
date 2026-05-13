@@ -22,3 +22,5 @@ npm run db:migrate:deploy
 ```
 
 O fluxo oficial de banco é exclusivamente por migration.
+
+O endpoint `/api/detection` realiza apenas a analise temporaria. A persistencia de placa e defeitos acontece em `/api/detection/save`, somente depois de confirmacao explicita na interface.

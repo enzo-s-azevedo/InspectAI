@@ -1,6 +1,5 @@
 import { fail, ok } from '@/lib/http';
-import { resolvePlaca, persistDetections } from '@/lib/detection';
-import { serializeDefeito } from '@/lib/serializers';
+import { ensureModeloExiste } from '@/lib/detection';
 import { extractImagesFromZip, normalizeDetections, readAndValidateUpload } from '@/lib/upload';
 
 class AiServiceError extends Error {
@@ -105,6 +104,15 @@ function parseSelectedClasses(rawValue) {
   }
 }
 
+function parseModeloCodigo(formData) {
+  const values = [formData.get('modelo_codigo'), formData.get('modeloCodigo'), formData.get('placaCodigo')];
+  for (const value of values) {
+    const codigo = String(value || '').trim();
+    if (codigo) return codigo;
+  }
+  return '';
+}
+
 function filterDetectionsBySelectedClasses(detections, selectedClasses) {
   if (!Array.isArray(selectedClasses) || selectedClasses.length === 0) {
     return detections;
@@ -118,8 +126,7 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
     const uploadedFile = formData.get('image') || formData.get('file');
-    const placaId = formData.get('placaId');
-    const placaCodigo = formData.get('placaCodigo');
+    const modeloCodigo = parseModeloCodigo(formData);
     const selectedClasses = parseSelectedClasses(formData.get('classes'));
 
     if (!uploadedFile) {
@@ -131,6 +138,13 @@ export async function POST(request) {
       uploadInfo = await readAndValidateUpload(uploadedFile);
     } catch (error) {
       return fail(error.message || 'Arquivo invalido', 400, 'INVALID_UPLOAD');
+    }
+
+    let modelo = null;
+    try {
+      modelo = await ensureModeloExiste(modeloCodigo);
+    } catch (error) {
+      return fail(error.message || 'Modelo nao encontrado', 404, 'NOT_FOUND');
     }
 
     const aiUrl = process.env.AI_SERVICE_URL || 'http://ai:5000';
@@ -148,14 +162,8 @@ export async function POST(request) {
       return fail(error.message || 'Arquivo .zip invalido', 400, 'INVALID_UPLOAD');
     }
 
-    const placa = await resolvePlaca({
-      placaId: placaId ? String(placaId) : null,
-      placaCodigo: placaCodigo ? String(placaCodigo) : null,
-    });
-
     const perImage = [];
     const flattenedDetections = [];
-    const persisted = [];
 
     for (const input of inputs) {
       let detections;
@@ -179,33 +187,28 @@ export async function POST(request) {
       detections = filterDetectionsBySelectedClasses(detections, selectedClasses);
 
       flattenedDetections.push(...detections);
-
-      const createdDefeitos = await persistDetections({
-        detections,
-        placa,
-        isVideo: uploadInfo.kind === 'video',
-      });
-
-      persisted.push(...createdDefeitos);
       perImage.push({
         fileName: input.name,
         detections,
-        savedDefeitos: createdDefeitos.map(serializeDefeito),
       });
     }
 
     return ok(
       {
         detections: flattenedDetections,
-        savedDefeitos: persisted.map(serializeDefeito),
+        savedDefeitos: [],
+        modelo: modelo ? { codigo: modelo.codigo } : null,
+        modeloCodigo: modelo.codigo,
+        inputType: uploadInfo.kind,
         itens: perImage,
       },
       {
         inputType: uploadInfo.kind,
         selectedClasses,
+        modeloCodigo: modelo.codigo,
         totalFiles: inputs.length,
         totalDetections: flattenedDetections.length,
-        totalPersisted: persisted.length,
+        totalPersisted: 0,
       }
     );
   } catch (error) {

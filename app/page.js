@@ -14,7 +14,7 @@ export default function HomePage() {
         const [defeitos, placas, modelos, health] = await Promise.all([
           api.getDefeitos(),
           api.getPlacas(),
-          fetch('/backend-api/modelos').then((response) => response.json()).then((payload) => payload.data || []),
+          api.getModelos(),
           api.getHealth(),
         ])
         setMetrics({
