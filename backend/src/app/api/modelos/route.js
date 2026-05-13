@@ -9,8 +9,7 @@ export async function GET() {
         placas: {
           select: {
             id: true,
-            codigo: true,
-            nomeClasse: true,
+            modeloCodigo: true,
           },
         },
       },
@@ -27,7 +26,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await readJson(request);
-    const { codigo, descricao } = body || {};
+    const { codigo } = body || {};
     const codigoModelo = String(codigo || '').trim();
 
     if (!codigoModelo) {
@@ -37,7 +36,6 @@ export async function POST(request) {
     const modelo = await prisma.modelo.create({
       data: {
         codigo: codigoModelo,
-        descricao,
       },
     });
 

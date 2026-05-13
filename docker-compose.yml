@@ -9,7 +9,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - inspectai_mysql_data_v2:/var/lib/mysql
+      - inspectai_mysql_data_v3:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
       interval: 10s
@@ -91,4 +91,4 @@ services:
     command: ["node", "scripts/run-integration-tests.js"]
 
 volumes:
-  inspectai_mysql_data_v2:
+  inspectai_mysql_data_v3:

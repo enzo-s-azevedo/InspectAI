@@ -6,21 +6,21 @@ import { api } from '@/services/api'
 import { toast } from 'sonner'
 
 export default function HomePage() {
-  const [metrics, setMetrics] = useState({ defeitos: 0, placas: 0, usuarios: 0, aiStatus: 'offline' })
+  const [metrics, setMetrics] = useState({ defeitos: 0, placas: 0, modelos: 0, aiStatus: 'offline' })
 
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [defeitos, placas, usuarios, health] = await Promise.all([
+        const [defeitos, placas, modelos, health] = await Promise.all([
           api.getDefeitos(),
           api.getPlacas(),
-          api.getUsuarios(),
+          fetch('/backend-api/modelos').then((response) => response.json()).then((payload) => payload.data || []),
           api.getHealth(),
         ])
         setMetrics({
           defeitos: defeitos.length,
           placas: placas.length,
-          usuarios: usuarios.length,
+          modelos: modelos.length,
           aiStatus: health?.ai?.status || 'online',
         })
       } catch (error) {
@@ -58,19 +58,19 @@ export default function HomePage() {
             <p className="text-[10px] text-white/40 leading-relaxed uppercase font-mono">Monitoramento dinâmico de fluxo contínuo.</p>
           </Link>
 
-          <Link href="/relatorios" className="group bg-white/[0.02] border border-white/10 p-8 rounded-2xl hover:border-fuchsia-500/50 transition-all hover:bg-fuchsia-500/[0.02]">
+          <Link href="/defeitos" className="group bg-white/[0.02] border border-white/10 p-8 rounded-2xl hover:border-fuchsia-500/50 transition-all hover:bg-fuchsia-500/[0.02]">
             <div className="w-12 h-12 bg-fuchsia-500/10 text-fuchsia-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(192,38,211,0.1)]">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
-            <h3 className="text-sm font-black text-white uppercase mb-2 tracking-widest">Relatórios</h3>
-            <p className="text-[10px] text-white/40 leading-relaxed uppercase font-mono">Gestão de histórico e exportação de logs.</p>
+            <h3 className="text-sm font-black text-white uppercase mb-2 tracking-widest">Defeitos</h3>
+            <p className="text-[10px] text-white/40 leading-relaxed uppercase font-mono">Consulta direta dos registros persistidos.</p>
           </Link>
         </div>
 
         <div className="p-8 bg-white/[0.01] border border-white/5 rounded-3xl grid grid-cols-2 md:grid-cols-4 gap-12">
             <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Defeitos</p><p className="text-3xl font-black text-white italic">{metrics.defeitos}</p></div>
             <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Placas</p><p className="text-3xl font-black text-white italic">{metrics.placas}</p></div>
-            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Usuários</p><p className="text-3xl font-black text-white italic">{metrics.usuarios}</p></div>
+            <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">Modelos</p><p className="text-3xl font-black text-white italic">{metrics.modelos}</p></div>
             <div><p className="text-[9px] text-white/20 uppercase font-black mb-2 tracking-widest">IA Status</p><p className="text-3xl font-black text-white italic text-fuchsia-500 uppercase">{metrics.aiStatus}</p></div>
         </div>
       </div>

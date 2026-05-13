@@ -1,36 +1,34 @@
-# Final Project Structure
+# Final Structure
 
 ```text
 InspectAI/
-  Dockerfile
-  docker-compose.yml
-  next.config.mjs
-  .dockerignore
-  .env.example
   app/
-  components/
-  services/
+    api/defect-classes/
+    configuracoes/
+    defeitos/
+    imagens/
+    videos/
   backend/
-    Dockerfile
-    .dockerignore
-    .env.example
     prisma/
+      schema.prisma
+      migrations/
+        0003_minimal_schema/
+          migration.sql
     src/
-      app/
-        api/
-          defeitos/
-          detection/
-          health/
-          placas/
-          relatorios/
-          usuarios/
+      app/api/
+        defeitos/
+        detection/
+        health/
+        modelos/
+        placas/
+        swagger/
       lib/
         db.js
         detection.js
         http.js
         serializers.js
+        upload.js
   yolo/
     INTERFACE/
-      Dockerfile
-      inference_service.py
+    TREINO/
 ```

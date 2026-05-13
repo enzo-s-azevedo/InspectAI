@@ -183,7 +183,7 @@ export async function POST(request) {
       const createdDefeitos = await persistDetections({
         detections,
         placa,
-        imageName: input.name || 'upload',
+        isVideo: uploadInfo.kind === 'video',
       });
 
       persisted.push(...createdDefeitos);

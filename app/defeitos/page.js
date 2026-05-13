@@ -8,6 +8,14 @@ function getClasseDefeito(defeito) {
   return defeito?.classe_defeito || ''
 }
 
+function getStatusLabel(status) {
+  const labels = {
+    confirmado: 'Confirmado',
+    falso_positivo: 'Falso positivo',
+  }
+  return labels[status] || status || 'Confirmado'
+}
+
 export default function DefeitosPage() {
   const [classeFiltro, setClasseFiltro] = useState('Todos')
   const [search, setSearch] = useState('')
@@ -43,17 +51,34 @@ export default function DefeitosPage() {
     const classeDefeito = getClasseDefeito(d)
     const matchSearch = search === '' ||
       String(d.id).includes(search) ||
-      d.placa?.codigo?.toLowerCase().includes(search.toLowerCase()) ||
-      classeDefeito.toLowerCase().includes(search.toLowerCase()) ||
-      d.origem?.toLowerCase().includes(search.toLowerCase())
+      d.placa?.modelo_codigo?.toLowerCase().includes(search.toLowerCase()) ||
+      classeDefeito.toLowerCase().includes(search.toLowerCase())
     return matchSearch
   })
 
   const metrics = [
     { label: 'Total de Defeitos',  value: isLoading ? '-' : defectList.length, color: 'border-t-amber' },
-    { label: 'Confirmados',        value: isLoading ? '-' : defectList.filter(d => d.confirmado === true).length, color: 'border-t-critical-text' },
-    { label: 'Falsos Positivos',   value: isLoading ? '-' : defectList.filter(d => d.confirmado === false).length, color: 'border-t-neutral-text' },
+    { label: 'Confirmados',        value: isLoading ? '-' : defectList.filter(d => d.status_confirmacao === 'confirmado').length, color: 'border-t-success-text' },
+    { label: 'Falsos Positivos',   value: isLoading ? '-' : defectList.filter(d => d.status_confirmacao === 'falso_positivo').length, color: 'border-t-critical-text' },
   ]
+
+  async function updateStatus(defeitoId, statusConfirmacao) {
+    const previous = defectList
+    setDefectList(current => current.map(item => (
+      item.id === defeitoId ? { ...item, status_confirmacao: statusConfirmacao } : item
+    )))
+
+    try {
+      const updated = await api.atualizarDefeito({
+        id: defeitoId,
+        status_confirmacao: statusConfirmacao,
+      })
+      setDefectList(current => current.map(item => (item.id === defeitoId ? updated : item)))
+    } catch {
+      setDefectList(previous)
+      setError('Erro ao atualizar status de confirmacao')
+    }
+  }
 
   return (
     <AppShell breadcrumb="/ Defeitos">
@@ -111,7 +136,7 @@ export default function DefeitosPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/50">
-                {['ID', 'Placa', 'Classe do Defeito', 'Origem', 'Confirmação', 'Data/Hora'].map(h => (
+                {['ID', 'Modelo', 'Classe do Defeito', 'Placa ID', 'Confirmação', 'Tipo', 'Data/Hora'].map(h => (
                   <th key={h} className="font-mono text-2xs text-text-muted uppercase tracking-label px-3 py-3 text-left">{h}</th>
                 ))}
               </tr>
@@ -120,30 +145,41 @@ export default function DefeitosPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/30 last:border-0">
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-3 py-3"><div className="h-3 w-16 bg-bg-elevated animate-pulse rounded"></div></td>
                     ))}
                   </tr>
                 ))
               ) : error ? (
-                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-critical-text">Erro ao carregar: {error}</td></tr>
               ) : filtered.length > 0 ? (
                 filtered.map(d => (
                   <tr key={d.id} className="border-b border-border/30 last:border-0 hover:bg-bg-elevated transition-all duration-fast">
                     <td className="px-3 py-3 font-mono text-xs text-amber">{d.id}</td>
-                    <td className="px-3 py-3 font-mono text-xs text-text-secondary">{d.placa?.codigo || '-'}</td>
+                    <td className="px-3 py-3 font-mono text-xs text-text-secondary">{d.placa?.modelo_codigo || '-'}</td>
                     <td className="px-3 py-3 text-xs text-text-primary">{getClasseDefeito(d)}</td>
-                    <td className="px-3 py-3 text-xs text-text-secondary">{d.origem}</td>
+                    <td className="px-3 py-3 text-xs text-text-secondary">{d.placa_id}</td>
                     <td className="px-3 py-3">
-                      <span className={`inline-flex rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase ${d.confirmado ? 'border-success-text/40 text-success-text bg-success-text/10' : 'border-critical-text/40 text-critical-text bg-critical-text/10'}`}>
-                        {d.confirmado ? 'Confirmado' : 'Falso positivo'}
+                      <select
+                        value={d.status_confirmacao || 'confirmado'}
+                        onChange={event => updateStatus(d.id, event.target.value)}
+                        className="bg-bg-elevated border border-border rounded px-2 py-1 font-mono text-[10px] text-text-primary outline-none focus:border-amber"
+                        aria-label={`Confirmacao do defeito ${d.id}`}
+                      >
+                        <option value="confirmado">{getStatusLabel('confirmado')}</option>
+                        <option value="falso_positivo">{getStatusLabel('falso_positivo')}</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded border px-2 py-1 font-mono text-[10px] font-bold uppercase ${d.tipo === 'video' ? 'border-success-text/40 text-success-text bg-success-text/10' : 'border-neutral-text/40 text-neutral-text bg-bg-elevated'}`}>
+                        {d.tipo || 'imagem'}
                       </span>
                     </td>
-                    <td className="px-3 py-3 font-mono text-xs text-text-muted">{new Date(d.data_hora || d.criado).toLocaleString('pt-BR')}</td>
+                    <td className="px-3 py-3 font-mono text-xs text-text-muted">{d.data_hora ? new Date(d.data_hora).toLocaleString('pt-BR') : '-'}</td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={6} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center font-mono text-xs text-text-muted">Nenhum defeito encontrado.</td></tr>
               )}
             </tbody>
           </table>
