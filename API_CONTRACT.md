@@ -117,6 +117,28 @@ Atualiza a confirmação do defeito.
 Multipart:
 
 - `file`: imagem, ZIP ou vídeo
-- `placaId`: opcional
-- `placaCodigo`: opcional, usado como `modelo.codigo`
+- `modelo_codigo`: obrigatorio para validar o modelo selecionado
 - `classes`: opcional
+
+Retorna apenas a analise temporaria, sem persistir no banco.
+
+### `POST /api/detection/save`
+
+Body JSON:
+
+```json
+{
+  "modelo_codigo": "PCB-A001-L1",
+  "source_type": "imagem",
+  "detections": [
+    {
+      "class_id": 0,
+      "label": "R/CFaltante",
+      "confidence": 0.97,
+      "bbox": [10, 20, 100, 120]
+    }
+  ]
+}
+```
+
+Cria uma nova placa vinculada ao modelo informado e persiste as deteccoes somente quando o usuario confirma o salvamento.

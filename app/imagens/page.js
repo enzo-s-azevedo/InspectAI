@@ -5,7 +5,6 @@ import AppShell from '@/components/AppShell'
 import { api } from '@/services/api'
 import { toast } from 'sonner'
 
-const DEFAULT_PLACA_CODIGO = 'PCB-AUTO-001'
 const MODEL_PATH = 'runs/detect/train/weights/best.pt'
 const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm']
 
@@ -26,13 +25,20 @@ function normalizeBBox(bbox) {
 
 export default function InspecaoImagens() {
   const [imageFile, setImageFile] = useState(null)
+  const [models, setModels] = useState([])
+  const [selectedModelCodigo, setSelectedModelCodigo] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [detections, setDetections] = useState([])
+  const [savedDetections, setSavedDetections] = useState([])
+  const [savedPlaca, setSavedPlaca] = useState(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [statusText, setStatusText] = useState('Aguardando imagem ou lote')
   const [errorText, setErrorText] = useState('')
   const [availableClasses, setAvailableClasses] = useState([])
+  const [fallbackClasses, setFallbackClasses] = useState([])
   const [selectedClasses, setSelectedClasses] = useState([])
+  const [analysisMeta, setAnalysisMeta] = useState(null)
 
   const fileInputRef = useRef(null)
   const originalCanvasRef = useRef(null)
@@ -66,6 +72,15 @@ export default function InspecaoImagens() {
   }, [selectedImageUrl])
 
   useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const data = await api.getModelos()
+        setModels(Array.isArray(data) ? data : [])
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+
     const loadDefectClasses = async () => {
       try {
         const response = await fetch('/api/defect-classes', { cache: 'no-store' })
@@ -75,14 +90,42 @@ export default function InspecaoImagens() {
         }
 
         const classes = Array.isArray(payload?.data?.classes) ? payload.data.classes : []
+        setFallbackClasses(classes)
         setAvailableClasses(classes)
+        setSelectedClasses((current) => (current.length > 0 ? current : classes))
       } catch (error) {
         toast.error(error.message)
       }
     }
 
+    loadModels()
     loadDefectClasses()
   }, [])
+
+  useEffect(() => {
+    const loadModelDefects = async () => {
+      if (!selectedModelCodigo) {
+        setAvailableClasses(fallbackClasses)
+        setSelectedClasses((current) => (current.length > 0 ? current.filter((item) => fallbackClasses.includes(item)) : fallbackClasses))
+        return
+      }
+
+      try {
+        const defeitos = await api.getDefeitos({ modelo_codigo: selectedModelCodigo })
+        const classesFromDb = Array.from(new Set(defeitos.map((item) => item?.classe_defeito).filter(Boolean))).sort()
+        const nextClasses = classesFromDb.length > 0 ? classesFromDb : fallbackClasses
+        setAvailableClasses(nextClasses)
+        setSelectedClasses((current) => {
+          const intersection = current.filter((item) => nextClasses.includes(item))
+          return intersection.length > 0 ? intersection : nextClasses
+        })
+      } catch (error) {
+        toast.error(error.message)
+      }
+    }
+
+    loadModelDefects()
+  }, [selectedModelCodigo, fallbackClasses])
 
   useEffect(() => {
     if (!selectedImageUrl) {
@@ -248,6 +291,9 @@ export default function InspecaoImagens() {
   const clearImage = () => {
     setImageFile(null)
     setDetections([])
+    setSavedDetections([])
+    setSavedPlaca(null)
+    setAnalysisMeta(null)
     setSelectedIndex(0)
     setStatusText('Aguardando imagem ou lote')
     setErrorText('')
@@ -288,9 +334,13 @@ export default function InspecaoImagens() {
       return
     }
 
+    if (!selectedModelCodigo || models.length === 0) {
+      toast.error('Selecione um modelo de placa')
+      return
+    }
+
     const classesArray = [...selectedClasses]
     if (classesArray.length === 0) {
-      setErrorText('Selecione ao menos um defeito')
       setStatusText('Aguardando processamento')
       toast.error('Selecione ao menos um defeito')
       return
@@ -301,11 +351,13 @@ export default function InspecaoImagens() {
       setErrorText('')
       setStatusText('Processando...')
       setDetections([])
+      setSavedDetections([])
+      setSavedPlaca(null)
       setSelectedIndex(0)
 
       const formData = new FormData()
       formData.append('file', imageFile)
-      formData.append('placaCodigo', DEFAULT_PLACA_CODIGO)
+      formData.append('modelo_codigo', selectedModelCodigo)
       
       if (classesArray.length > 0) {
         formData.append('classes', JSON.stringify(classesArray))
@@ -315,25 +367,94 @@ export default function InspecaoImagens() {
 
       const nextDetections = Array.isArray(result.detections) ? result.detections : []
       setDetections(nextDetections)
+      setAnalysisMeta({ inputType: result.inputType || 'imagem' })
       setSelectedIndex(0)
-      setStatusText('Deteccao concluida')
+      setStatusText('Deteccao concluida. Aguardando salvamento explicito')
       toast.success('Deteccao concluida com sucesso')
     } catch (error) {
       setStatusText('Aguardando imagem ou lote')
-      toast.error(error.message)
+      setErrorText(error.message || 'Nao foi possivel processar a imagem')
+      toast.error(error.message || 'Nao foi possivel processar a imagem')
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const saveDetections = async () => {
+    if (!selectedModelCodigo) {
+      toast.error('Selecione um modelo antes de salvar')
+      return
+    }
+
+    if (!detections.length) {
+      toast.error('Nao ha deteccoes temporarias para salvar')
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      const result = await api.salvarDeteccoes({
+        modelo_codigo: selectedModelCodigo,
+        detections,
+        source_type: analysisMeta?.inputType || (String(imageFile?.type || '').startsWith('video/') ? 'video' : 'imagem'),
+      })
+
+      const persisted = Array.isArray(result?.savedDefeitos) ? result.savedDefeitos : []
+      setSavedDetections(persisted)
+      setSavedPlaca(result?.placa || null)
+      setStatusText(`Deteccoes salvas na placa ${result?.placa?.id || ''}`.trim())
+      toast.success('Deteccoes salvas com sucesso')
+
+      const defeitosAtualizados = await api.getDefeitos({ modelo_codigo: selectedModelCodigo })
+      const classesAtualizadas = Array.from(new Set(defeitosAtualizados.map((item) => item?.classe_defeito).filter(Boolean))).sort()
+      if (classesAtualizadas.length > 0) {
+        setAvailableClasses(classesAtualizadas)
+        setSelectedClasses((current) => {
+          const intersection = current.filter((item) => classesAtualizadas.includes(item))
+          return intersection.length > 0 ? intersection : classesAtualizadas
+        })
+      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const cancelDetections = () => {
+    setDetections([])
+    setSavedDetections([])
+    setSavedPlaca(null)
+    setAnalysisMeta(null)
+    setSelectedIndex(0)
+    setStatusText('Deteccoes temporarias descartadas')
+    toast.info('Deteccoes descartadas')
   }
 
   return (
     <AppShell breadcrumb="Análise / Scanner de PCBs">
       <div className="p-6 h-[calc(100vh-48px)] flex flex-col gap-6 overflow-hidden relative">
         <span className="sr-only">Imagem para analise</span>
-        <span className="sr-only">Codigo da placa</span>
+        <span className="sr-only">Codigo do modelo selecionado</span>
         <span className="sr-only">Defeitos persistidos</span>
         <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-panel border border-border p-4 rounded-2xl shadow-xl shrink-0">
           <div className="flex items-center gap-3">
+            <div className="min-w-[240px]">
+              <p className="text-[9px] text-text-muted uppercase font-mono mb-1">Modelo da placa</p>
+              <select
+                value={selectedModelCodigo}
+                onChange={(event) => setSelectedModelCodigo(event.target.value)}
+                className={`w-full bg-bg-elevated border border-border font-mono text-[10px] font-black uppercase rounded-lg px-3 py-2.5 outline-none focus:border-amber transition-colors ${selectedModelCodigo ? 'text-text-primary' : 'text-red-500'}`}
+              >
+                <option value="">Selecione um modelo cadastrado</option>
+                {models.map((modelo) => (
+                  <option key={modelo.codigo} value={modelo.codigo}>
+                    {modelo.codigo}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -360,7 +481,7 @@ export default function InspecaoImagens() {
 
             <button
               onClick={runDetection}
-              disabled={isAnalyzing || !imageFile}
+                disabled={isAnalyzing || !imageFile || !selectedModelCodigo}
               className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-all cursor-pointer"
             >
               {isAnalyzing ? 'Processando...' : 'Executar deteccao'}
@@ -370,12 +491,13 @@ export default function InspecaoImagens() {
           <div className="text-right min-w-[220px]">
             <p className="text-[9px] text-text-muted uppercase font-mono">Modelo carregado</p>
             <p className="text-[11px] text-text-primary font-mono">Modelo: {MODEL_PATH}</p>
+            <p className="text-[11px] text-text-secondary font-mono">Selecionado: {selectedModelCodigo || 'nenhum'}</p>
           </div>
         </div>
 
         <div className="bg-bg-panel border border-border rounded-2xl p-4 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Selecao de componentes</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Defeitos do modelo</p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -408,7 +530,7 @@ export default function InspecaoImagens() {
             ))}
 
             {!availableClasses.length && (
-              <p className="text-[10px] text-text-muted uppercase font-mono">Nenhuma classe disponivel em data.yaml</p>
+              <p className="text-[10px] text-text-muted uppercase font-mono">Selecione um modelo para carregar os defeitos do banco</p>
             )}
           </div>
         </div>
@@ -497,11 +619,34 @@ export default function InspecaoImagens() {
             <p className="text-[10px] uppercase font-black tracking-widest text-text-secondary">Estado atual</p>
             <p className="text-[12px] font-mono text-text-primary">{statusText}</p>
             {errorText && <p className="text-[11px] font-mono text-red-400">{errorText}</p>}
+            {savedPlaca && (
+              <p className="text-[11px] font-mono text-success-text">Placa persistida: #{savedPlaca.id} · {savedPlaca.modelo_codigo}</p>
+            )}
           </div>
 
           <div>
             <p className="text-[10px] uppercase font-black tracking-widest text-text-secondary">Quantidade de defeitos</p>
-            <p className="text-[12px] font-mono text-amber">{detections.length} defeitos detectados</p>
+            <p className="text-[12px] font-mono text-amber">{detections.length} defeitos temporarios</p>
+            <p className="text-[11px] font-mono text-text-secondary">Persistidos: {savedDetections.length}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={saveDetections}
+              disabled={isSaving || detections.length === 0 || !selectedModelCodigo || (savedDetections.length > 0 && savedDetections.length === detections.length)}
+              className="px-4 py-2.5 bg-success-text/90 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-success-text disabled:opacity-40 transition-all cursor-pointer"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar defeitos detectados'}
+            </button>
+            <button
+              type="button"
+              onClick={cancelDetections}
+              disabled={isAnalyzing && detections.length === 0}
+              className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-[10px] font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       </div>

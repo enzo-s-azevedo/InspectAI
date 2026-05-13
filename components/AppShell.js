@@ -16,6 +16,7 @@ export default function AppShell({ children, breadcrumb }) {
       { name: 'Vídeos',    icon: <path d="M23 7l-7 5 7 5V7zM1 5h14v14H1V5z"/>, path: '/videos' },
     ],
     controle: [
+      { name: 'Modelos',    icon: <path d="M12 2l8 4v12l-8 4-8-4V6z"/>, path: '/configuracoes' },
       { name: 'Defeitos',   icon: <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>, path: '/defeitos' },
     ],
   }

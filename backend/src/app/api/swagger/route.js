@@ -24,7 +24,7 @@ export async function GET() {
           responses: { 200: { description: 'IA disponivel' } },
         },
         post: {
-          summary: 'Processa imagem, ZIP ou video e persiste defeitos',
+          summary: 'Processa imagem, ZIP ou video e retorna analise temporaria',
           tags: ['Detection'],
           requestBody: {
             required: true,
@@ -34,15 +34,39 @@ export async function GET() {
                   type: 'object',
                   properties: {
                     file: { type: 'string', format: 'binary' },
-                    placaCodigo: { type: 'string' },
-                    placaId: { type: 'integer' },
+                    modelo_codigo: { type: 'string' },
                     classes: { type: 'string' },
                   },
                 },
               },
             },
           },
-          responses: { 200: { description: 'Deteccao concluida' } },
+          responses: { 200: { description: 'Analise concluida' } },
+        },
+      },
+      '/api/detection/save': {
+        post: {
+          summary: 'Salva placa e defeitos confirmados',
+          tags: ['Detection'],
+          requestBody: {
+            content: {
+              'application/json': {
+                example: {
+                  modelo_codigo: 'PCB-A001-L1',
+                  source_type: 'imagem',
+                  detections: [
+                    {
+                      class_id: 0,
+                      label: 'R/CFaltante',
+                      confidence: 0.97,
+                      bbox: [10, 20, 100, 120],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          responses: { 201: { description: 'Deteccoes salvas' } },
         },
       },
       '/api/modelos': {

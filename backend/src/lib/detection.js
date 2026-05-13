@@ -1,79 +1,101 @@
 import prisma from '@/lib/db';
 
-async function ensureModelo(codigo) {
-  return prisma.modelo.upsert({
-    where: { codigo },
-    update: {},
-    create: { codigo },
-  });
+function normalizeCodigo(value) {
+  return String(value || '').trim();
 }
 
-async function getOrCreateDefaultPlaca() {
-  const codigo = 'PCB-AUTO-DEFAULT';
-  await ensureModelo(codigo);
+function normalizeDetectionLabel(item) {
+  return normalizeCodigo(item?.label || item?.classe || item?.class || '');
+}
 
-  const existing = await prisma.placa.findFirst({
-    where: { modeloCodigo: codigo },
-  });
-  if (existing) return existing;
+function normalizeTipo(item, sourceType) {
+  if (sourceType === 'video') return 'video';
+  if (item?.frame !== undefined && item?.frame !== null) return 'video';
+  return 'imagem';
+}
 
-  return prisma.placa.create({
+function normalizeDataHora(item, tipo) {
+  if (tipo !== 'video') return null;
+
+  const rawValue = item?.data_hora || item?.dataHora || null;
+  if (!rawValue) return undefined;
+
+  const dataHora = new Date(rawValue);
+  if (Number.isNaN(dataHora.getTime())) {
+    throw new Error('data_hora invalida na deteccao');
+  }
+
+  return dataHora;
+}
+
+export async function ensureModeloExiste(modeloCodigo, client = prisma) {
+  const codigo = normalizeCodigo(modeloCodigo);
+  if (!codigo) {
+    throw new Error('modelo_codigo e obrigatorio');
+  }
+
+  const modelo = await client.modelo.findUnique({ where: { codigo } });
+  if (!modelo) {
+    throw new Error('Modelo nao encontrado');
+  }
+
+  return modelo;
+}
+
+export async function criarPlacaParaModelo(modeloCodigo, client = prisma) {
+  const codigo = normalizeCodigo(modeloCodigo);
+  if (!codigo) {
+    throw new Error('modelo_codigo e obrigatorio');
+  }
+
+  await ensureModeloExiste(codigo, client);
+
+  return client.placa.create({
     data: { modeloCodigo: codigo },
+    include: { modelo: true },
   });
 }
 
-export async function resolvePlaca({ placaId, placaCodigo }) {
-  if (placaId) {
-    const id = Number(placaId);
-    const byId = Number.isInteger(id) ? await prisma.placa.findUnique({ where: { id } }) : null;
-    if (byId) return byId;
+export async function persistirDeteccoesConfirmadas({ modeloCodigo, detections, sourceType = 'imagem' }) {
+  const codigo = normalizeCodigo(modeloCodigo);
+  if (!codigo) {
+    throw new Error('modelo_codigo e obrigatorio');
   }
 
-  if (placaCodigo) {
-    const codigo = String(placaCodigo).trim();
-    if (codigo) {
-      await ensureModelo(codigo);
-      const existing = await prisma.placa.findFirst({
-        where: { modeloCodigo: codigo },
-      });
-      if (existing) return existing;
-
-      return prisma.placa.create({
-        data: { modeloCodigo: codigo },
-      });
-    }
-  }
-
-  return getOrCreateDefaultPlaca();
-}
-
-export async function persistDetections({ detections, placa, isVideo = false }) {
   if (!Array.isArray(detections) || detections.length === 0) {
-    return [];
+    return { placa: null, defeitos: [] };
   }
 
-  const created = [];
+  return prisma.$transaction(async (client) => {
+    const placa = await criarPlacaParaModelo(codigo, client);
+    const defeitos = [];
 
-  for (const item of detections) {
-    const classeDefeito = String(item.label || 'defeito-nao-classificado');
-    const hasVideoFrame = item.frame !== undefined && item.frame !== null;
-    const tipo = isVideo || hasVideoFrame ? 'video' : 'imagem';
+    for (const item of detections) {
+      const classeDefeito = normalizeDetectionLabel(item);
+      if (!classeDefeito) {
+        throw new Error('Deteccao sem classe valida');
+      }
 
-    const defeito = await prisma.defeito.create({
-      data: {
-        placaId: placa.id,
-        classeDefeito,
-        statusConfirmacao: 'confirmado',
-        tipo,
-        ...(tipo === 'imagem' ? { dataHora: null } : {}),
-      },
-      include: {
-        placa: true,
-      },
-    });
+      const tipo = normalizeTipo(item, sourceType);
+      const dataHora = normalizeDataHora(item, tipo);
 
-    created.push(defeito);
-  }
+      const defeito = await client.defeito.create({
+        data: {
+          placaId: placa.id,
+          classeDefeito,
+          statusConfirmacao: 'confirmado',
+          tipo,
+          ...(tipo === 'imagem' ? { dataHora: null } : {}),
+          ...(tipo === 'video' && dataHora ? { dataHora } : {}),
+        },
+        include: {
+          placa: true,
+        },
+      });
 
-  return created;
+      defeitos.push(defeito);
+    }
+
+    return { placa, defeitos };
+  });
 }

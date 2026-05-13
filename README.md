@@ -35,6 +35,7 @@ O backend executa `prisma migrate deploy` no startup.
 - `GET, POST /api/defeitos`
 - `PUT /api/defeitos`
 - `GET, POST /api/detection`
+- `POST /api/detection/save`
 - `GET /api/swagger`
 
 ## Validação

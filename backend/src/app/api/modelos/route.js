@@ -33,6 +33,15 @@ export async function POST(request) {
       return fail('codigo do modelo e obrigatorio', 400, 'VALIDATION_ERROR');
     }
 
+    const existente = await prisma.modelo.findUnique({
+      where: { codigo: codigoModelo },
+      select: { codigo: true },
+    });
+
+    if (existente) {
+      return fail('Codigo de modelo ja existe', 409, 'UNIQUE_CONSTRAINT');
+    }
+
     const modelo = await prisma.modelo.create({
       data: {
         codigo: codigoModelo,
