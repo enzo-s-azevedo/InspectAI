@@ -17,13 +17,7 @@ export function middleware(request) {
   // 2. Proteção do Backend
   if (path.startsWith('/api/')) {
     
-    // 🚨 ======================================================== 🚨
-    // 🚨 APAGAR DEPOIS: EXCEÇÃO TEMPORÁRIA PARA CRIAR O 1º ADMIN  🚨
-    // 🚨 ======================================================== 🚨
-    if (path === '/api/usuarios' && request.method === 'POST') {
-      return NextResponse.next(); 
-    }
-    // 🚨 ======================================================== 🚨
+
 
     // Busca o token nos Cookies (Navegador) OU nos Headers (Testes/Mobile/Postman)
     const cookieToken = request.cookies.get('inspectai_session')?.value;
