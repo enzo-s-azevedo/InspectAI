@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { api } from '@/services/api'
 import { toast } from 'sonner'
@@ -10,14 +11,29 @@ function getAvatar(nome) {
 }
 
 export default function UsuariosPage() {
+
+  const router = useRouter()
   const [users, setUsers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [form, setForm] = useState({ nome: '', email: '', senha: '', cargo: 'FUNCIONARIO' })
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
-  useEffect(() => { loadUsers() }, [])
+  useEffect(() => {
+    // 1. Busca os dados do usuário salvos no login
+    const userJson = localStorage.getItem('inspectai_user')
+    const user = userJson ? JSON.parse(userJson) : null
+
+    // 2. A Barreira de Segurança
+    if (!user || user.cargo !== 'ADMINISTRADOR') {
+      router.push('/') // Expulsa para a tela inicial
+    } else {
+      setIsAuthorized(true) // Libera a renderização da tela
+      loadUsers() // Só agora ele vai na API buscar a lista
+    }
+  }, [])
 
   async function loadUsers() {
     setIsLoading(true)
@@ -66,6 +82,7 @@ export default function UsuariosPage() {
     }
   }
 
+  if (!isAuthorized) return null;
   return (
     <AppShell breadcrumb="/ Usuários">
       <div className="p-6 flex flex-col gap-5">
