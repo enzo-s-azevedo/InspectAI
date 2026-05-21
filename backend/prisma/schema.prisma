@@ -40,3 +40,13 @@ model Defeito {
   @@index([tipo], map: "idx_defeito_tipo")
   @@map("defeito")
 }
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  senhaHash String   @map("senha_hash") @db.VarChar(255)
+  cargo     String   @db.VarChar(32)
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamp(0)
+
+  @@map("usuario")
+}

@@ -108,4 +108,20 @@ export const api = {
   salvarDeteccoes: (body) =>
     requestBody('POST', '/detection/save', body),
 
+// Usuários
+  getUsuarios: () =>
+    request('/usuarios'),
+
+  criarUsuario: (body) =>
+    requestBody('POST', '/usuarios', body),
+
+  editarUsuario: (id, body) =>
+    requestBody('PUT', `/usuarios/${id}`, body),
+
+  deletarUsuario: (id) =>
+    requestBody('DELETE', `/usuarios/${id}`),
+
+
+
+
 }
