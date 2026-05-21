@@ -6,7 +6,7 @@ export async function GET() {
     info: {
       title: 'InspectAI API',
       version: '1.0.0',
-      description: 'API minimalista baseada no modelo oficial modelo -> placa -> defeito.',
+      description: 'API minimalista baseada no modelo oficial modelo -> placa -> defeito, com autenticação JWT.',
     },
     servers: [{ url: 'http://localhost:3001', description: 'Servidor Local Docker' }],
     paths: {
@@ -17,6 +17,62 @@ export async function GET() {
           responses: { 200: { description: 'Servico online' } },
         },
       },
+      // ==========================================
+      // AUTENTICAÇÃO E USUÁRIOS
+      // ==========================================
+      '/api/usuarios': {
+        get: {
+          summary: 'Lista todos os usuários',
+          tags: ['Usuários'],
+          responses: { 200: { description: 'Lista de usuários retornada' } },
+        },
+        post: {
+          summary: 'Cria novo usuário com senha criptografada',
+          tags: ['Usuários'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                example: {
+                  nome: 'Admin Teste',
+                  email: 'admin@teste.com',
+                  senha: 'senha-segura-123',
+                  cargo: 'ADMINISTRADOR'
+                }
+              }
+            }
+          },
+          responses: { 
+            201: { description: 'Usuário criado' },
+            400: { description: 'Email já cadastrado ou campos ausentes' }
+          },
+        },
+      },
+      '/api/auth/login': {
+        post: {
+          summary: 'Autentica um usuário e retorna o token JWT',
+          tags: ['Autenticação'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                example: { 
+                  email: 'admin@teste.com', 
+                  senha: 'senha-segura-123' 
+                }
+              }
+            }
+          },
+          responses: {
+            200: { description: 'Login realizado com sucesso (Retorna o Token e salva no Cookie)' },
+            400: { description: 'Dados ausentes' },
+            401: { description: 'Credenciais inválidas' }
+          }
+        }
+      },
+      // ==========================================
+      // DETECTION
+      // ==========================================
       '/api/detection': {
         get: {
           summary: 'Verifica disponibilidade da IA',
@@ -69,6 +125,9 @@ export async function GET() {
           responses: { 201: { description: 'Deteccoes salvas' } },
         },
       },
+      // ==========================================
+      // MODELOS, PLACAS E DEFEITOS
+      // ==========================================
       '/api/modelos': {
         get: {
           summary: 'Lista modelos',

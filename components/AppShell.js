@@ -10,10 +10,13 @@ export default function AppShell({ children, breadcrumb }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [cargo, setCargo] = useState('FUNCIONARIO') // Estado para guardar o cargo
 
-  // Lê o cookie assim que o menu carrega na tela
+  // Lê os dados do usuário do LocalStorage assim que o menu carrega
   useEffect(() => {
-    const match = document.cookie.match(/(^| )inspectai_cargo=([^;]+)/)
-    if (match) setCargo(match[2])
+    const userJson = localStorage.getItem('inspectai_user')
+    if (userJson) {
+      const user = JSON.parse(userJson)
+      setCargo(user.cargo)
+    }
   }, [])
 
   // Objeto base de menus (todo mundo vê)
