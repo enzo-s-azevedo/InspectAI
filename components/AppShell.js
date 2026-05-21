@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -8,7 +8,15 @@ export default function AppShell({ children, breadcrumb }) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(true)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [cargo, setCargo] = useState('FUNCIONARIO') // Estado para guardar o cargo
 
+  // Lê o cookie assim que o menu carrega na tela
+  useEffect(() => {
+    const match = document.cookie.match(/(^| )inspectai_cargo=([^;]+)/)
+    if (match) setCargo(match[2])
+  }, [])
+
+  // Objeto base de menus (todo mundo vê)
   const menus = {
     analise: [
       { name: 'Dashboard', icon: <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>, path: '/' },
@@ -19,6 +27,17 @@ export default function AppShell({ children, breadcrumb }) {
       { name: 'Modelos',    icon: <path d="M12 2l8 4v12l-8 4-8-4V6z"/>, path: '/configuracoes' },
       { name: 'Defeitos',   icon: <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>, path: '/defeitos' },
     ],
+  }
+
+  // Se for Administrador, injeta a área de usuários no menu!
+  if (cargo === 'ADMINISTRADOR') {
+    menus.administracao = [
+      { 
+        name: 'Usuários', 
+        icon: <g><path d="M12 14c4.418 0 8 2.686 8 6v1H4v-1c0-3.314 3.582-6 8-6z"/><path d="M12 11a4 4 0 100-8 4 4 0 000 8z"/></g>, 
+        path: '/usuarios' 
+      }
+    ]
   }
 
   return (
@@ -78,7 +97,7 @@ export default function AppShell({ children, breadcrumb }) {
             {!isCollapsed && <span className="ml-3 font-mono text-xl font-black tracking-tighter text-text-primary uppercase group-hover/logo:text-amber transition-colors">InspectAI</span>}
           </Link>
 
-          <button onClick={() => setIsCollapsed(!isCollapsed)} className="w-10 h-10 flex items-center justify-center rounded-md bg-bg-elevated hover:bg-amber/10 hover:text-amber text-text-muted transition-all border border-border/50 active:scale-90">
+          <button onClick={() => setIsCollapsed(!isCollapsed)} className="w-10 h-10 flex items-center justify-center rounded-md bg-bg-elevated hover:bg-amber/10 hover:text-amber text-text-muted transition-all border border-border/50 active:scale-90 cursor-pointer">
             <svg className={`w-5 h-5 transition-transform duration-500 ${isCollapsed ? '' : 'rotate-90'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
           </button>
         </div>
@@ -87,7 +106,11 @@ export default function AppShell({ children, breadcrumb }) {
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-8">
           {Object.entries(menus).map(([key, items]) => (
             <div key={key}>
-              {!isCollapsed && <p className="px-3 text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-3">{key === 'analise' ? 'Análise' : 'Controle'}</p>}
+              {!isCollapsed && (
+                <p className="px-3 text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-3">
+                  {key === 'analise' ? 'Análise' : key === 'controle' ? 'Controle' : 'Administração'}
+                </p>
+              )}
               <nav className="space-y-1">
                 {items.map((item) => (
                   <Link 
@@ -110,7 +133,7 @@ export default function AppShell({ children, breadcrumb }) {
           <button 
             onClick={() => setIsHelpOpen(true)}
             title={isCollapsed ? "Ajuda" : ""}
-            className="flex items-center gap-3 w-full px-2 py-1.5 text-text-muted hover:text-amber transition-colors group"
+            className="flex items-center gap-3 w-full px-2 py-1.5 text-text-muted hover:text-amber transition-colors group cursor-pointer"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             {!isCollapsed && <span className="font-mono text-[10px] font-bold uppercase tracking-widest">Ajuda</span>}
@@ -142,7 +165,9 @@ export default function AppShell({ children, breadcrumb }) {
                 <span className="font-mono text-[9px] text-text-muted uppercase tracking-tighter">System:</span>
                 <span className="font-mono text-[10px] text-success-text uppercase font-bold tracking-widest">Online</span>
              </div>
-             <div className="w-7 h-7 bg-amber/10 rounded border border-amber/20 flex items-center justify-center font-mono text-[10px] text-amber font-bold">JL</div>
+             <div className="w-7 h-7 bg-amber/10 rounded border border-amber/20 flex items-center justify-center font-mono text-[10px] text-amber font-bold">
+                {cargo === 'ADMINISTRADOR' ? 'AD' : 'FN'}
+             </div>
           </div>
         </header>
         <div className="flex-1 overflow-auto">{children}</div>
