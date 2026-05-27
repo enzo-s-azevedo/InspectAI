@@ -38,21 +38,7 @@ componentes eletrônicos.
 
 ------------------------------------------------------------------------
 
-### 2. Detecção em Vídeos
-
-O sistema realiza a detecção de defeitos a partir de vídeos.
-
-**Funcionalidades:** 
-- Processamento contínuo de vídeo com detecção de
-defeitos 
-- Registro automático de data e hora de cada detecção 
-- Processamento em lote:
-    - Definição da quantidade de placas a serem analisadas
-    - Geração de relatório consolidado ao final do processamento
-
-------------------------------------------------------------------------
-
-### 3. Banco de Dados de Defeitos
+### 2. Banco de Dados de Defeitos
 
 O sistema mantém um repositório estruturado de defeitos.
 
@@ -65,7 +51,7 @@ O sistema mantém um repositório estruturado de defeitos.
 
 ------------------------------------------------------------------------
 
-### 4. Controle de Usuários
+### 3. Controle de Usuários
 
 #### Administrador
 
@@ -80,7 +66,7 @@ O sistema mantém um repositório estruturado de defeitos.
 
 ------------------------------------------------------------------------
 
-### 5. Geração de Relatórios
+### 4. Geração de Relatórios
 
 O sistema permite a criação de relatórios detalhados contendo:
 
