@@ -1,16 +1,20 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { api } from '@/services/api'
 import { toast } from 'sonner'
+import { getUsuarioLogado, isAdministrador } from '@/lib/permissions'
 
 export default function AdministracaoModelosPage() {
+  const router = useRouter()
   const [models, setModels] = useState([])
   const [codigo, setCodigo] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
   const totalPlacas = useMemo(() => models.reduce((acc, modelo) => acc + (Array.isArray(modelo.placas) ? modelo.placas.length : 0), 0), [models])
 
@@ -31,8 +35,16 @@ export default function AdministracaoModelosPage() {
   }
 
   useEffect(() => {
+    const user = getUsuarioLogado()
+
+    if (!isAdministrador(user?.cargo)) {
+      router.push('/acesso-negado')
+      return
+    }
+
+    setIsAuthorized(true)
     loadModels()
-  }, [])
+  }, [router])
 
   const handleCreate = async (event) => {
     event.preventDefault()
@@ -60,6 +72,8 @@ export default function AdministracaoModelosPage() {
       setIsSaving(false)
     }
   }
+
+  if (!isAuthorized) return null
 
   return (
     <AppShell breadcrumb="Controle / Modelos">

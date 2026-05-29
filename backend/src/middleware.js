@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isAdministrador } from './lib/permissions';
 
 export function middleware(request) {
   const path = request.nextUrl.pathname;
@@ -14,17 +15,11 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // 2. Proteção do Backend
   if (path.startsWith('/api/')) {
-    
-
-
-    // Busca o token nos Cookies (Navegador) OU nos Headers (Testes/Mobile/Postman)
     const cookieToken = request.cookies.get('inspectai_session')?.value;
     const authHeader = request.headers.get('authorization');
     const token = cookieToken || (authHeader ? authHeader.split(' ')[1] : null);
 
-    // Sem crachá? Fica de fora.
     if (!token) {
       return NextResponse.json(
         { success: false, error: 'Acesso negado. Faça login para acessar esta rota.' },
@@ -32,15 +27,18 @@ export function middleware(request) {
       );
     }
 
-    // 3. BARREIRA DE CARGO (RBAC)
     try {
-      // Como o Next.js Edge Runtime não suporta a biblioteca jsonwebtoken, 
-      // nós abrimos o payload do token "na unha" (base64) para ler o cargo.
       const payloadBase64 = token.split('.')[1];
       const decodedPayload = JSON.parse(atob(payloadBase64));
+      const cargo = decodedPayload.cargo;
+      const metodo = request.method;
 
-      // Regra de Ouro: Se tentar acessar /usuarios e não for ADMIN, expulsa!
-      if (path.startsWith('/api/usuarios') && decodedPayload.cargo !== 'ADMINISTRADOR') {
+      const rotaExigeAdmin =
+        path.startsWith('/api/usuarios') ||
+        path.startsWith('/api/relatorios') ||
+        (path.startsWith('/api/modelos') && metodo !== 'GET');
+
+      if (rotaExigeAdmin && !isAdministrador(cargo)) {
         return NextResponse.json(
           { success: false, error: 'Acesso negado. Requer privilégios de administrador.' },
           { status: 403 }
@@ -48,7 +46,6 @@ export function middleware(request) {
       }
       
     } catch (error) {
-      // Se o token estiver malformado
       return NextResponse.json(
         { success: false, error: 'Token inválido ou corrompido.' },
         { status: 401 }

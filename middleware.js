@@ -1,27 +1,25 @@
 import { NextResponse } from 'next/server'
+import { isAdministrador, ROTAS_ADMIN } from './lib/permissions'
 
 export function middleware(request) {
   const { pathname } = request.nextUrl
   
-  // RASTREADOR: Vai imprimir no terminal do Docker toda vez que alguém acessar
-  console.log('🛡️ MIDDLEWARE RODANDO NA ROTA:', pathname)
-
   const cargoCookie = request.cookies.get('inspectai_cargo')?.value
+  const isAcessoNegado = pathname.startsWith('/acesso-negado')
 
-  if (!cargoCookie && !pathname.startsWith('/login')) {
+  if (!cargoCookie && !pathname.startsWith('/login') && !isAcessoNegado) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  const adminRoutes = ['/usuarios', '/configuracoes']
-  const isProtectedRoute = adminRoutes.some(route => pathname.startsWith(route))
+  const isProtectedRoute = ROTAS_ADMIN.some(route => pathname.startsWith(route))
 
-  if (isProtectedRoute && cargoCookie !== 'ADMINISTRADOR') {
-    return NextResponse.redirect(new URL('/defeitos', request.url))
+  if (isProtectedRoute && !isAdministrador(cargoCookie)) {
+    return NextResponse.redirect(new URL('/acesso-negado', request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|backend-api|_next/static|_next/image|favicon.ico).*)'],
 }

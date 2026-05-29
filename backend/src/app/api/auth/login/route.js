@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { permissoesPorCargo } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 // Em ambiente de produção, esta chave deve estar no ficheiro .env
@@ -52,6 +53,7 @@ export async function POST(request) {
         nome: usuario.nome,
         email: usuario.email,
         cargo: usuario.cargo,
+        permissoes: permissoesPorCargo(usuario.cargo),
         token: token // Enviamos o token também no corpo para facilitar os testes no Swagger
       }
     }, { status: 200 });
