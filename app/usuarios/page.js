@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { api } from '@/services/api'
 import { toast } from 'sonner'
+import { getUsuarioLogado, isAdministrador } from '@/lib/permissions'
 
 function getAvatar(nome) {
   return nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'
@@ -23,12 +24,11 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     // 1. Busca os dados do usuário salvos no login
-    const userJson = localStorage.getItem('inspectai_user')
-    const user = userJson ? JSON.parse(userJson) : null
+    const user = getUsuarioLogado()
 
     // 2. A Barreira de Segurança
-    if (!user || user.cargo !== 'ADMINISTRADOR') {
-      router.push('/') // Expulsa para a tela inicial
+    if (!isAdministrador(user?.cargo)) {
+      router.push('/acesso-negado')
     } else {
       setIsAuthorized(true) // Libera a renderização da tela
       loadUsers() // Só agora ele vai na API buscar a lista

@@ -10,7 +10,10 @@ function getErrorMessage(payload, fallback) {
 }
 
 async function request(path) {
-  const res = await fetch(`${BASE_URL}${path}`)
+  const res = await fetch(`${BASE_URL}${path}`, {
+    credentials: 'include',
+    headers: getAuthHeaders(),
+  })
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
     throw new Error(getErrorMessage(error, `Erro ${res.status}`))
@@ -24,7 +27,8 @@ async function request(path) {
 async function requestBody(method, path, body) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) {
@@ -39,6 +43,8 @@ async function requestBody(method, path, body) {
 async function requestForm(path, formData) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
+    credentials: 'include',
+    headers: getAuthHeaders(),
     body: formData,
   })
   if (!res.ok) {
@@ -48,6 +54,19 @@ async function requestForm(path, formData) {
   const json = await res.json()
   if (!json.success) throw new Error(getErrorMessage(json, 'Erro desconhecido'))
   return json.data
+}
+
+function getAuthHeaders(headers = {}) {
+  if (typeof window === 'undefined') return headers
+
+  try {
+    const user = JSON.parse(window.localStorage.getItem('inspectai_user') || 'null')
+    return user?.token
+      ? { ...headers, Authorization: `Bearer ${user.token}` }
+      : headers
+  } catch {
+    return headers
+  }
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────

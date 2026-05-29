@@ -15,8 +15,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Apontando explicitamente para a porta 3001 onde o backend vive
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch('/backend-api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -38,8 +37,8 @@ export default function LoginPage() {
         document.cookie = `inspectai_cargo=${data.data.cargo}; path=/; max-age=3600`
         
         // Se o seu backend também envia o token de segurança na resposta, salve ele também:
-        if (data.token) {
-           document.cookie = `inspectai_token=${data.token}; path=/; max-age=3600`
+        if (data.data.token) {
+           document.cookie = `inspectai_token=${data.data.token}; path=/; max-age=3600`
         }
         
         // 3. Força a ida para a tela principal

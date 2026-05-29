@@ -7,6 +7,8 @@ const createJestConfig = nextJest({
 const config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
+  testMatch: ['<rootDir>/tests/frontend/**/*.test.js'],
+  testPathIgnorePatterns: ['<rootDir>/backend/'],
   moduleNameMapper: {
     // Ensina o Jest a encontrar seus arquivos quando você usa o atalho @/
     '^@/(.*)$': '<rootDir>/$1',

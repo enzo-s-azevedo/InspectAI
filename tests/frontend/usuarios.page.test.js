@@ -28,7 +28,7 @@ describe('Barreira de Segurança - Tela de Usuários', () => {
     jest.clearAllMocks()
   })
 
-  it('Deve expulsar o usuário para a Home ( / ) se ele for FUNCIONARIO', () => {
+  it('Deve exibir acesso negado se ele for FUNCIONARIO', () => {
     const mockPush = jest.fn()
     useRouter.mockReturnValue({ push: mockPush })
 
@@ -38,8 +38,8 @@ describe('Barreira de Segurança - Tela de Usuários', () => {
     // Tentamos renderizar a tela
     render(<UsuariosPage />)
 
-    // A prova real: Verificamos se a função de expulsar foi chamada mandando pra raiz
-    expect(mockPush).toHaveBeenCalledWith('/')
+    // A prova real: Verificamos se a função de expulsar foi chamada mandando para acesso negado
+    expect(mockPush).toHaveBeenCalledWith('/acesso-negado')
   })
 
   it('Deve liberar o acesso se for ADMINISTRADOR', async () => {

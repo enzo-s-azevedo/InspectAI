@@ -9,6 +9,9 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   // Como estamos testando o backend/API, o ambiente TEM que ser 'node' (e não 'jsdom' como no frontend)
   testEnvironment: 'node',
+  roots: ['<rootDir>/../tests/backend'],
+  testMatch: ['<rootDir>/../tests/backend/**/*.test.js'],
+  moduleDirectories: ['node_modules', '<rootDir>/node_modules'],
 };
 
 // Exporta a configuração traduzida pelo Next.js
