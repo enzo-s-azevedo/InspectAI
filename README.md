@@ -1,12 +1,17 @@
 # InspectAI
 
-Sistema minimalista para inspeção de placas eletrônicas com frontend Next.js, backend Next.js/API, MySQL, Prisma ORM e serviço YOLO.
+Sistema minimalista para inspeção de placas eletrônicas com frontend Next.js, backend Next.js/API, PostgreSQL Neon, Prisma ORM e serviço YOLO.
 
 ## Banco Oficial
 
-O banco é criado exclusivamente pela migration:
+O banco em nuvem é o Neon, configurado pela variável `DATABASE_URL`.
 
-`backend/prisma/migrations/0003_minimal_schema/migration.sql`
+Para sincronizar o schema:
+
+```bash
+cd backend
+npm run db:push
+```
 
 Modelo relacional:
 

@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "test": "jest"
   },
@@ -34,7 +35,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "jest": "^30.4.2",
-    "mysql2": "^3.6.5",
     "prisma": "^5.0.0",
     "supertest": "^7.2.2",
     "tailwindcss": "^4",
