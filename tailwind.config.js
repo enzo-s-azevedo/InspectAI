@@ -82,20 +82,20 @@ module.exports = {
       },
 
       fontSize: {
-        // Labels e metadados
-        '2xs': ['10px', { lineHeight: '1.4', letterSpacing: '0.05em' }],
-        xs:    ['11px', { lineHeight: '1.5' }],
-        sm:    ['12px', { lineHeight: '1.5' }],
+        // Labels e metadados (Aumentado levemente)
+        '2xs': ['11px', { lineHeight: '1.4', letterSpacing: '0.05em' }],
+        xs:    ['12px', { lineHeight: '1.5' }],
+        sm:    ['14px', { lineHeight: '1.5' }], // Antes era 12px
 
-        // Corpo
-        base:  ['13px', { lineHeight: '1.6' }],
-        md:    ['14px', { lineHeight: '1.6' }],
+        // Corpo (Restaurando para tamanhos amigáveis de leitura)
+        base:  ['16px', { lineHeight: '1.6' }], // Padrão da web (antes era 13px)
+        md:    ['18px', { lineHeight: '1.6' }], // Antes era 14px
 
-        // Headings
-        lg:    ['16px', { lineHeight: '1.4', fontWeight: '500' }],
-        xl:    ['20px', { lineHeight: '1.3', fontWeight: '600' }],
-        '2xl': ['24px', { lineHeight: '1.2', fontWeight: '600' }],
-        '3xl': ['28px', { lineHeight: '1.1', fontWeight: '600' }],
+        // Headings (Acompanhando o crescimento)
+        lg:    ['20px', { lineHeight: '1.4', fontWeight: '500' }],
+        xl:    ['24px', { lineHeight: '1.3', fontWeight: '600' }],
+        '2xl': ['28px', { lineHeight: '1.2', fontWeight: '600' }],
+        '3xl': ['32px', { lineHeight: '1.1', fontWeight: '600' }],
       },
 
       fontWeight: {
