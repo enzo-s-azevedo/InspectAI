@@ -1,21 +1,4 @@
 services:
-  db:
-    image: mysql:8.0
-    container_name: inspectai_db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: inspectai
-    ports:
-      - "3307:3306"
-    volumes:
-      - inspectai_mysql_data_v3:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   ai:
     build: ./yolo/INTERFACE
     container_name: inspectai_ai
@@ -39,12 +22,10 @@ services:
     container_name: inspectai_backend
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
       ai:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql://root:root_password@db:3306/inspectai
+      DATABASE_URL: ${DATABASE_URL}
       AI_SERVICE_URL: http://inspectai_ai:5000
       NODE_ENV: production
     ports:
@@ -72,8 +53,6 @@ services:
     volumes:
       - ./:/workspace
     depends_on:
-      db:
-        condition: service_healthy
       ai:
         condition: service_healthy
       backend:
@@ -85,10 +64,6 @@ services:
       FRONTEND_BASE_URL: http://frontend:3000
       FRONTEND_API_BASE_URL: http://frontend:3000/backend-api
       AI_BASE_URL: http://inspectai_ai:5000
-      DB_HOST: db
-      DB_PORT: 3306
+      DATABASE_URL: ${DATABASE_URL}
       REPORT_OUTPUT_PATH: /workspace/integration-report.md
     command: ["node", "scripts/run-integration-tests.js"]
-
-volumes:
-  inspectai_mysql_data_v3:

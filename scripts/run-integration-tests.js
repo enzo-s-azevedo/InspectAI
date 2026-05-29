@@ -4,8 +4,7 @@ const path = require('node:path');
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://localhost:3001/api';
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
 const FRONTEND_API_BASE_URL = process.env.FRONTEND_API_BASE_URL || `${FRONTEND_BASE_URL}/backend-api`;
-const DB_HOST = process.env.DB_HOST || '127.0.0.1';
-const DB_PORT = Number(process.env.DB_PORT || 3307);
+const DATABASE_URL = process.env.DATABASE_URL || '';
 const REPORT_OUTPUT_PATH = process.env.REPORT_OUTPUT_PATH || path.resolve(process.cwd(), 'integration-report.md');
 
 const results = [];
@@ -71,9 +70,12 @@ async function main() {
   let placaId = null;
   let defeitoId = null;
 
-  await runStep('Database port reachable', async () => {
-    await tcpConnect(DB_HOST, DB_PORT);
-    return `${DB_HOST}:${DB_PORT}`;
+  await runStep('Database endpoint reachable', async () => {
+    assert(DATABASE_URL, 'DATABASE_URL ausente');
+    const dbUrl = new URL(DATABASE_URL);
+    const port = Number(dbUrl.port || 5432);
+    await tcpConnect(dbUrl.hostname, port);
+    return `${dbUrl.hostname}:${port}`;
   });
 
   await runStep('Backend health', async () => {

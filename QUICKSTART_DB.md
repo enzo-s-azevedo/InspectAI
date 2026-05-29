@@ -6,7 +6,7 @@ Suba o projeto:
 docker compose up --build
 ```
 
-O banco MySQL é criado a partir da migration oficial:
+O banco PostgreSQL em nuvem é configurado via Neon pela variável `DATABASE_URL`.
 
 `backend/prisma/migrations/0003_minimal_schema/migration.sql`
 
