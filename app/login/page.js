@@ -67,7 +67,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-black uppercase italic tracking-tight mb-2">
           Login <span className="text-fuchsia-500">InspectAI</span>
         </h1>
-        <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-mono mb-8 text-center">
+        <p className="text-xs text-white/40 uppercase tracking-[0.2em] font-mono mb-8 text-center">
           Bem-vindo! <br/> Insira suas credenciais
         </p>
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full p-4 bg-white/5 border border-white/10 text-white font-mono text-xs rounded-xl focus:outline-none focus:border-fuchsia-500 transition-all placeholder:text-white/30"
+              className="w-full p-4 bg-white/5 border border-white/10 text-white font-mono text-sm rounded-xl focus:outline-none focus:border-fuchsia-500 transition-all placeholder:text-white/30"
             />
           </div>
 
@@ -90,14 +90,14 @@ export default function LoginPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
-              className="w-full p-4 bg-white/5 border border-white/10 text-white font-mono text-xs rounded-xl focus:outline-none focus:border-fuchsia-500 transition-all placeholder:text-white/30"
+              className="w-full p-4 bg-white/5 border border-white/10 text-white font-mono text-sm rounded-xl focus:outline-none focus:border-fuchsia-500 transition-all placeholder:text-white/30"
             />
           </div>
 
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-4 mt-4 bg-fuchsia-500 text-black font-mono text-xs font-black uppercase rounded-xl hover:bg-fuchsia-400 transition-all shadow-[0_0_15px_rgba(192,38,211,0.3)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 mt-4 bg-fuchsia-500 text-black font-mono text-sm font-black uppercase rounded-xl hover:bg-fuchsia-400 transition-all shadow-[0_0_15px_rgba(192,38,211,0.3)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Autenticando...' : 'Entrar no Sistema'}
           </button>

@@ -437,14 +437,15 @@ export default function InspecaoImagens() {
         <span className="sr-only">Imagem para analise</span>
         <span className="sr-only">Codigo do modelo selecionado</span>
         <span className="sr-only">Defeitos persistidos</span>
+        
         <div className="flex flex-wrap items-center justify-between gap-3 bg-bg-panel border border-border p-4 rounded-2xl shadow-xl shrink-0">
           <div className="flex items-center gap-3">
             <div className="min-w-[240px]">
-              <p className="text-[9px] text-text-muted uppercase font-mono mb-1">Modelo da placa</p>
+              <p className="text-xs text-text-muted uppercase font-mono mb-1">Modelo da placa</p>
               <select
                 value={selectedModelCodigo}
                 onChange={(event) => setSelectedModelCodigo(event.target.value)}
-                className={`w-full bg-bg-elevated border border-border font-mono text-[10px] font-black uppercase rounded-lg px-3 py-2.5 outline-none focus:border-amber transition-colors ${selectedModelCodigo ? 'text-text-primary' : 'text-red-500'}`}
+                className={`w-full bg-bg-elevated border border-border font-mono text-sm font-black uppercase rounded-lg px-3 py-2.5 outline-none focus:border-amber transition-colors ${selectedModelCodigo ? 'text-text-primary' : 'text-red-500'}`}
               >
                 <option value="">Selecione um modelo cadastrado</option>
                 {models.map((modelo) => (
@@ -465,7 +466,7 @@ export default function InspecaoImagens() {
             
             <button
               onClick={handleSelectFile}
-              className="px-4 py-2.5 bg-bg-elevated border border-border text-text-primary font-mono text-[10px] font-black uppercase rounded-lg hover:border-amber transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-bg-elevated border border-border text-text-primary font-mono text-sm font-black uppercase rounded-lg hover:border-amber transition-all cursor-pointer"
             >
               {imageFile ? 'Trocar arquivo' : 'Carregar arquivo'}
             </button>
@@ -473,7 +474,7 @@ export default function InspecaoImagens() {
             {imageFile && (
               <button
                 onClick={clearImage}
-                className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-[10px] font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
+                className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-sm font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
               >
                 Remover
               </button>
@@ -482,34 +483,34 @@ export default function InspecaoImagens() {
             <button
               onClick={runDetection}
                 disabled={isAnalyzing || !imageFile || !selectedModelCodigo}
-              className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-sm font-black uppercase rounded-lg hover:bg-amber-600 transition-all cursor-pointer"
             >
               {isAnalyzing ? 'Processando...' : 'Executar deteccao'}
             </button>
           </div>
 
           <div className="text-right min-w-[220px]">
-            <p className="text-[9px] text-text-muted uppercase font-mono">Modelo carregado</p>
-            <p className="text-[11px] text-text-primary font-mono">Modelo: {MODEL_PATH}</p>
-            <p className="text-[11px] text-text-secondary font-mono">Selecionado: {selectedModelCodigo || 'nenhum'}</p>
+            <p className="text-xs text-text-muted uppercase font-mono">Modelo carregado</p>
+            <p className="text-sm text-text-primary font-mono">Modelo: {MODEL_PATH}</p>
+            <p className="text-sm text-text-secondary font-mono">Selecionado: {selectedModelCodigo || 'nenhum'}</p>
           </div>
         </div>
 
         <div className="bg-bg-panel border border-border rounded-2xl p-4 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Defeitos do modelo</p>
+              <p className="text-sm font-black uppercase tracking-widest text-text-secondary">Defeitos do modelo</p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={selectAllClasses}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
+                className="px-3 py-2 bg-bg-elevated border border-border text-xs uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
               >
                 Selecionar todos
               </button>
               <button
                 type="button"
                 onClick={clearSelectedClasses}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
+                className="px-3 py-2 bg-bg-elevated border border-border text-xs uppercase font-mono rounded hover:border-amber transition-colors cursor-pointer"
               >
                 Limpar selecao
               </button>
@@ -518,7 +519,7 @@ export default function InspecaoImagens() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {availableClasses.map((className) => (
-              <label key={className} className="flex items-center gap-2 text-[11px] font-mono text-text-primary border border-border rounded px-2 py-2 bg-bg-base/70 cursor-pointer">
+              <label key={className} className="flex items-center gap-2 text-sm font-mono text-text-primary border border-border rounded px-2 py-2 bg-bg-base/70 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selectedClassesSet.has(className)}
@@ -530,7 +531,7 @@ export default function InspecaoImagens() {
             ))}
 
             {!availableClasses.length && (
-              <p className="text-[10px] text-text-muted uppercase font-mono">Selecione um modelo para carregar os defeitos do banco</p>
+              <p className="text-sm text-text-muted uppercase font-mono">Selecione um modelo para carregar os defeitos do banco</p>
             )}
           </div>
         </div>
@@ -538,19 +539,19 @@ export default function InspecaoImagens() {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
           <div className="bg-bg-panel border border-border rounded-3xl flex flex-col overflow-hidden min-h-0">
             <div className="p-4 border-b border-border bg-bg-elevated/20">
-              <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Imagem original</span>
+              <span className="text-sm font-black uppercase tracking-widest text-text-secondary">Imagem original</span>
             </div>
             
             <div ref={originalCanvasWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black/40 min-h-0 overflow-auto">
-              {!imageFile && <div className="text-text-muted text-[10px] uppercase font-mono">Aguardando imagem ou lote</div>}
+              {!imageFile && <div className="text-text-muted text-sm uppercase font-mono">Aguardando imagem ou lote</div>}
               
               {imageFile && (imageFile.name.endsWith('.zip') || imageFile.type === 'application/zip') && (
                 <div className="flex flex-col items-center gap-2">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-amber">
                     <path d="M21 8v13H3V3h7l5 5zm-7 5h-2v-2h2v2zm0 4h-2v-2h2v2zm2-2h2v-2h-2v2zm0 4h2v-2h-2v2z" />
                   </svg>
-                  <span className="text-amber text-[12px] uppercase font-mono font-bold">Lote ZIP Selecionado</span>
-                  <span className="text-text-muted text-[10px] font-mono">{imageFile.name}</span>
+                  <span className="text-amber text-base uppercase font-mono font-bold">Lote ZIP Selecionado</span>
+                  <span className="text-text-muted text-sm font-mono">{imageFile.name}</span>
                 </div>
               )}
 
@@ -560,8 +561,8 @@ export default function InspecaoImagens() {
                     <path d="M15 10l4.5-2.5v9L15 14v-4z" />
                     <rect x="3" y="6" width="12" height="12" rx="2" />
                   </svg>
-                  <span className="text-amber text-[12px] uppercase font-mono font-bold">Video selecionado</span>
-                  <span className="text-text-muted text-[10px] font-mono">{imageFile.name}</span>
+                  <span className="text-amber text-base uppercase font-mono font-bold">Video selecionado</span>
+                  <span className="text-text-muted text-sm font-mono">{imageFile.name}</span>
                 </div>
               )}
 
@@ -573,8 +574,8 @@ export default function InspecaoImagens() {
 
           <div className="bg-bg-panel border border-border rounded-3xl flex flex-col overflow-hidden min-h-0">
             <div className="p-4 border-b border-border bg-bg-elevated/20 flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Defeito ampliado</span>
-              <span className="text-[10px] font-mono text-amber">{detections.length} itens</span>
+              <span className="text-sm font-black uppercase tracking-widest text-text-secondary">Defeito ampliado</span>
+              <span className="text-sm font-mono text-amber">{detections.length} itens</span>
             </div>
             <div ref={cropCanvasWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black/40 min-h-0 overflow-auto">
               <canvas ref={cropCanvasRef} className="max-w-full rounded-lg border border-border" />
@@ -585,7 +586,7 @@ export default function InspecaoImagens() {
                 type="button"
                 disabled={detections.length < 2}
                 onClick={goToPrevDetection}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
+                className="px-3 py-2 bg-bg-elevated border border-border text-xs uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
               >
                 &lt; Defeito anterior
               </button>
@@ -593,12 +594,12 @@ export default function InspecaoImagens() {
               <div className="text-center">
                 {selectedDetection ? (
                   <>
-                    <p className="text-[10px] text-text-primary font-mono">Defeito {selectedIndex + 1} de {detections.length}</p>
-                    <p className="text-[10px] text-text-secondary font-mono">Classe: {selectedDetection.label}</p>
-                    <p className="text-[10px] text-text-secondary font-mono">Confianca: {formatConfidence(selectedDetection.confidence)}</p>
+                    <p className="text-sm text-text-primary font-mono">Defeito {selectedIndex + 1} de {detections.length}</p>
+                    <p className="text-sm text-text-secondary font-mono">Classe: {selectedDetection.label}</p>
+                    <p className="text-sm text-text-secondary font-mono">Confianca: {formatConfidence(selectedDetection.confidence)}</p>
                   </>
                 ) : (
-                  <p className="text-[10px] text-text-muted font-mono">Nenhum defeito selecionado</p>
+                  <p className="text-sm text-text-muted font-mono">Nenhum defeito selecionado</p>
                 )}
               </div>
 
@@ -606,7 +607,7 @@ export default function InspecaoImagens() {
                 type="button"
                 disabled={detections.length < 2}
                 onClick={goToNextDetection}
-                className="px-3 py-2 bg-bg-elevated border border-border text-[10px] uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
+                className="px-3 py-2 bg-bg-elevated border border-border text-xs uppercase font-mono rounded disabled:opacity-40 hover:border-amber transition-colors cursor-pointer"
               >
                 Proximo defeito &gt;
               </button>
@@ -616,18 +617,18 @@ export default function InspecaoImagens() {
 
         <div className="bg-bg-panel border border-border p-4 rounded-2xl shadow-2xl shrink-0 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase font-black tracking-widest text-text-secondary">Estado atual</p>
-            <p className="text-[12px] font-mono text-text-primary">{statusText}</p>
-            {errorText && <p className="text-[11px] font-mono text-red-400">{errorText}</p>}
+            <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Estado atual</p>
+            <p className="text-base font-mono text-text-primary">{statusText}</p>
+            {errorText && <p className="text-sm font-mono text-red-400">{errorText}</p>}
             {savedPlaca && (
-              <p className="text-[11px] font-mono text-success-text">Placa persistida: #{savedPlaca.id} · {savedPlaca.modelo_codigo}</p>
+              <p className="text-sm font-mono text-success-text">Placa persistida: #{savedPlaca.id} · {savedPlaca.modelo_codigo}</p>
             )}
           </div>
 
           <div>
-            <p className="text-[10px] uppercase font-black tracking-widest text-text-secondary">Quantidade de defeitos</p>
-            <p className="text-[12px] font-mono text-amber">{detections.length} defeitos temporarios</p>
-            <p className="text-[11px] font-mono text-text-secondary">Persistidos: {savedDetections.length}</p>
+            <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Quantidade de defeitos</p>
+            <p className="text-base font-mono text-amber">{detections.length} defeitos temporarios</p>
+            <p className="text-sm font-mono text-text-secondary">Persistidos: {savedDetections.length}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -635,7 +636,7 @@ export default function InspecaoImagens() {
               type="button"
               onClick={saveDetections}
               disabled={isSaving || detections.length === 0 || !selectedModelCodigo || (savedDetections.length > 0 && savedDetections.length === detections.length)}
-              className="px-4 py-2.5 bg-success-text/90 text-black font-mono text-[10px] font-black uppercase rounded-lg hover:bg-success-text disabled:opacity-40 transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-success-text/90 text-black font-mono text-sm font-black uppercase rounded-lg hover:bg-success-text disabled:opacity-40 transition-all cursor-pointer"
             >
               {isSaving ? 'Salvando...' : 'Salvar defeitos detectados'}
             </button>
@@ -643,7 +644,7 @@ export default function InspecaoImagens() {
               type="button"
               onClick={cancelDetections}
               disabled={isAnalyzing && detections.length === 0}
-              className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-[10px] font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
+              className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-sm font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
             >
               Cancelar
             </button>
@@ -653,3 +654,4 @@ export default function InspecaoImagens() {
     </AppShell>
   )
 }
+
