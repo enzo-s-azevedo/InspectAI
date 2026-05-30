@@ -31,6 +31,7 @@ current_defect_detections: list[dict[str, object]] = []
 current_defect_index = 0
 loaded_image_paths: list[Path] = []
 current_loaded_image_index = 0
+batch_results_by_path: dict[Path, list[dict[str, object]]] = {}
 configured_error_ids: set[int] = set()
 configured_error_labels: set[str] = set()
 
@@ -253,6 +254,33 @@ def refresh_display_for_selected_defect() -> None:
     update_navigation_buttons()
 
 
+def analyze_current_image(persist_json: bool = True) -> list[dict[str, object]]:
+    global current_defect_detections, current_defect_index
+
+    if current_image_bgr is None:
+        return []
+
+    if inference_service is None:
+        return []
+
+    apply_error_codes(show_feedback=False)
+
+    defect_detections = inference_service.predict_defects(
+        image_bgr=current_image_bgr,
+        configured_error_ids=configured_error_ids,
+        configured_error_labels=configured_error_labels,
+    )
+    current_defect_detections = defect_detections
+    current_defect_index = 0
+
+    if persist_json and current_image_path is not None:
+        exported_json_path = defect_json_exporter.append_detections(current_image_path, current_defect_detections)
+        status_var.set(f"{status_var.get()} JSON atualizado em: {exported_json_path.name}")
+
+    display_results(current_defect_detections)
+    return defect_detections
+
+
 def show_previous_defect() -> None:
     global current_defect_index
 
@@ -273,7 +301,7 @@ def show_next_defect() -> None:
     refresh_display_for_selected_defect()
 
 
-def load_image_path(image_path: Path) -> None:
+def load_image_path(image_path: Path, persist_json: bool = True) -> None:
     global current_image_path, current_image_bgr, current_defect_detections, current_defect_index
 
     if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
@@ -304,11 +332,18 @@ def load_image_path(image_path: Path) -> None:
         zoom_panel.configure(image="", text="Aguardando inferencia")
         zoom_panel.image = None
 
-    run_inference()
+    current_defect_detections = batch_results_by_path.get(image_path, [])
+    current_defect_index = 0
+
+    if image_path in batch_results_by_path:
+        display_results(current_defect_detections)
+        return
+
+    analyze_current_image(persist_json=persist_json)
 
 
 def load_image() -> None:
-    global loaded_image_paths, current_loaded_image_index
+    global loaded_image_paths, current_loaded_image_index, batch_results_by_path
 
     file_path = filedialog.askopenfilename(
         title="Selecione uma imagem",
@@ -319,10 +354,11 @@ def load_image() -> None:
         return
 
     image_path = Path(file_path)
+    batch_results_by_path = {}
     loaded_image_paths = [image_path]
     current_loaded_image_index = 0
     update_image_navigation_buttons()
-    load_image_path(image_path)
+    load_image_path(image_path, persist_json=True)
 
 
 def select_model_file() -> None:
@@ -345,7 +381,7 @@ def select_model_file() -> None:
 
 
 def load_images_from_folder() -> None:
-    global loaded_image_paths, current_loaded_image_index
+    global loaded_image_paths, current_loaded_image_index, batch_results_by_path, current_image_path, current_image_bgr, current_defect_detections, current_defect_index
 
     default_dir = DEFAULT_PREDICT_DIR if DEFAULT_PREDICT_DIR.exists() else workspace
     selected_dir = filedialog.askdirectory(title="Selecione a pasta com imagens", initialdir=str(default_dir))
@@ -362,10 +398,37 @@ def load_images_from_folder() -> None:
         messagebox.showwarning("Sem imagens", "Nenhuma imagem compativel foi encontrada na pasta selecionada.")
         return
 
+    batch_results_by_path = {}
     loaded_image_paths = image_paths
     current_loaded_image_index = 0
     update_image_navigation_buttons()
-    load_image_path(loaded_image_paths[current_loaded_image_index])
+
+    total_images = len(loaded_image_paths)
+    for index, image_path in enumerate(loaded_image_paths, start=1):
+        image_bgr = cv2.imread(str(image_path))
+        if image_bgr is None:
+            batch_results_by_path[image_path] = []
+            continue
+
+        current_image_path = image_path
+        current_image_bgr = image_bgr
+        status_var.set(f"Processando lote: {index}/{total_images} - {image_path.name}")
+        apply_error_codes(show_feedback=False)
+
+        defect_detections = inference_service.predict_defects(
+            image_bgr=current_image_bgr,
+            configured_error_ids=configured_error_ids,
+            configured_error_labels=configured_error_labels,
+        ) if inference_service is not None else []
+
+        batch_results_by_path[image_path] = defect_detections
+        current_defect_detections = defect_detections
+        current_defect_index = 0
+
+        if current_image_path is not None and defect_detections:
+            defect_json_exporter.append_detections(current_image_path, defect_detections)
+
+    load_image_path(loaded_image_paths[current_loaded_image_index], persist_json=False)
     status_var.set(f"Pasta carregada: {folder_path} | {len(loaded_image_paths)} imagem(ns)")
 
 
@@ -376,7 +439,7 @@ def show_previous_image() -> None:
         return
 
     current_loaded_image_index = (current_loaded_image_index - 1) % len(loaded_image_paths)
-    load_image_path(loaded_image_paths[current_loaded_image_index])
+    load_image_path(loaded_image_paths[current_loaded_image_index], persist_json=False)
 
 
 def show_next_image() -> None:
@@ -386,7 +449,7 @@ def show_next_image() -> None:
         return
 
     current_loaded_image_index = (current_loaded_image_index + 1) % len(loaded_image_paths)
-    load_image_path(loaded_image_paths[current_loaded_image_index])
+    load_image_path(loaded_image_paths[current_loaded_image_index], persist_json=False)
 
 
 def crop_defect(image_bgr: cv2.typing.MatLike, bbox: tuple[int, int, int, int], zoom_factor: int = 3) -> cv2.typing.MatLike:
@@ -411,25 +474,7 @@ def run_inference() -> None:
         messagebox.showerror("Modelo indisponivel", "O modelo YOLO nao foi carregado.")
         return
 
-    apply_error_codes(show_feedback=False)
-
-    defect_detections = inference_service.predict_defects(
-        image_bgr=current_image_bgr,
-        configured_error_ids=configured_error_ids,
-        configured_error_labels=configured_error_labels,
-    )
-    current_defect_detections = defect_detections
-    current_defect_index = 0
-
-    if current_image_path is not None:
-        exported_json_path = defect_json_exporter.append_detections(current_image_path, current_defect_detections)
-    else:
-        exported_json_path = None
-
-    display_results(current_defect_detections)
-
-    if exported_json_path is not None:
-        status_var.set(f"{status_var.get()} JSON atualizado em: {exported_json_path.name}")
+    analyze_current_image(persist_json=True)
 
 
 def display_results(defect_detections: list[dict[str, object]]) -> None:

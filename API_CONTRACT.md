@@ -1,6 +1,6 @@
 # InspectAI API Contract
 
-Contrato atual baseado no schema oficial minimalista.
+Contrato atual baseado no schema oficial com placas, defeitos e relatorios.
 
 ## Response Envelope
 
@@ -94,7 +94,7 @@ Com vídeo:
 }
 ```
 
-Para `tipo: "imagem"`, `data_hora` é salvo como `null`. Para `tipo: "video"`, o MySQL preenche `data_hora` com `CURRENT_TIMESTAMP` quando o campo não é informado.
+Para `tipo: "imagem"`, `data_hora` é salvo como `null`. Para `tipo: "video"`, o PostgreSQL preenche `data_hora` com `CURRENT_TIMESTAMP` quando o campo não é informado.
 
 Valores aceitos para `status_confirmacao`:
 
@@ -141,4 +141,20 @@ Body JSON:
 }
 ```
 
-Cria uma nova placa vinculada ao modelo informado e persiste as deteccoes somente quando o usuario confirma o salvamento.
+Cria uma nova placa vinculada ao modelo informado, cria um relatorio associado ao usuario autenticado e persiste as deteccoes somente quando o usuario confirma o salvamento.
+
+### `POST /api/detection/batch`
+
+Multipart:
+
+- `files`: pasta/arquivos de imagens `.jpg` ou `.png`
+
+Retorna somente a analise temporaria do lote. Nenhuma deteccao e persistida no banco por esse endpoint; o salvamento definitivo ocorre apenas em `POST /api/detection/save`.
+- `modelo_codigo`: obrigatorio
+- `classes`: opcional
+
+Cria o relatorio no inicio da execucao, associa o usuario autenticado como criador, vincula todas as imagens selecionadas ao relatorio e registra os defeitos detectados por imagem.
+
+### `PATCH /api/relatorios/:id`
+
+Atualiza dados administrativos do relatorio e registra `id_usuario_ultimo_acesso` sem alterar o criador original.

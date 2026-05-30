@@ -1,8 +1,9 @@
 # InspectAI Backend
 
-Backend Next.js com Prisma e MySQL usando apenas o schema oficial:
+Backend Next.js com Prisma e PostgreSQL usando o schema oficial:
 
-`modelo -> placa -> defeito`
+`usuario -> relatorio -> relatorio_imagem`
+`modelo -> placa -> defeito -> relatorio_defeito -> relatorio`
 
 ## Startup em Docker
 
@@ -23,4 +24,4 @@ npm run db:migrate:deploy
 
 O fluxo oficial de banco é exclusivamente por migration.
 
-O endpoint `/api/detection` realiza apenas a analise temporaria. A persistencia de placa e defeitos acontece em `/api/detection/save`, somente depois de confirmacao explicita na interface.
+O endpoint `/api/detection` realiza apenas a analise temporaria. A persistencia de placa, relatorio e defeitos acontece em `/api/detection/save`, somente depois de confirmacao explicita na interface. O endpoint `/api/detection/batch` cria o relatorio no inicio do lote e associa todas as imagens processadas a ele.

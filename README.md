@@ -13,15 +13,20 @@ cd backend
 npm run db:push
 ```
 
-Modelo relacional:
+Modelo relacional principal:
 
-`modelo -> placa -> defeito`
+`usuario -> relatorio -> relatorio_imagem`
+`modelo -> placa -> defeito -> relatorio_defeito -> relatorio`
 
 Tabelas oficiais:
 
 - `modelo`
 - `placa`
 - `defeito`
+- `usuario`
+- `relatorio`
+- `relatorio_defeito`
+- `relatorio_imagem`
 
 ## Execução
 
@@ -41,6 +46,8 @@ O backend executa `prisma migrate deploy` no startup.
 - `PUT /api/defeitos`
 - `GET, POST /api/detection`
 - `POST /api/detection/save`
+- `POST /api/detection/batch`
+- `PATCH, PUT /api/relatorios/:id`
 - `GET /api/swagger`
 
 ## Validação

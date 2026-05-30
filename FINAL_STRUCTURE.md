@@ -7,17 +7,17 @@ InspectAI/
     configuracoes/
     defeitos/
     imagens/
-    videos/
   backend/
     prisma/
       schema.prisma
       migrations/
-        0003_minimal_schema/
+        0001_init/
           migration.sql
     src/
       app/api/
         defeitos/
         detection/
+        relatorios/
         health/
         modelos/
         placas/

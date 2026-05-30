@@ -50,3 +50,36 @@ export function serializeDefeito(defeito) {
       : null,
   };
 }
+
+export function serializeRelatorio(relatorio) {
+  if (!relatorio) return null;
+
+  return {
+    id: relatorio.id,
+    placa_id: relatorio.placaId,
+    id_usuario_criador: relatorio.idUsuarioCriador,
+    id_usuario_ultimo_acesso: relatorio.idUsuarioUltimoAcesso,
+    criado_em: relatorio.criadoEm,
+    atualizado_em: relatorio.atualizadoEm,
+    placa: relatorio.placa
+      ? {
+          id: relatorio.placa.id,
+          modelo_codigo: relatorio.placa.modeloCodigo,
+        }
+      : undefined,
+    usuario_criador: relatorio.usuarioCriador
+      ? {
+          id: relatorio.usuarioCriador.id,
+          nome: relatorio.usuarioCriador.nome,
+          email: relatorio.usuarioCriador.email,
+        }
+      : undefined,
+    usuario_ultimo_acesso: relatorio.usuarioUltimoAcesso
+      ? {
+          id: relatorio.usuarioUltimoAcesso.id,
+          nome: relatorio.usuarioUltimoAcesso.nome,
+          email: relatorio.usuarioUltimoAcesso.email,
+        }
+      : null,
+  };
+}

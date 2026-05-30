@@ -1,6 +1,7 @@
 import { fail, ok, readJson } from '@/lib/http';
+import { getUsuarioAutenticado } from '@/lib/auth';
 import { persistirDeteccoesConfirmadas } from '@/lib/detection';
-import { serializeDefeito, serializePlaca } from '@/lib/serializers';
+import { serializeDefeito, serializePlaca, serializeRelatorio } from '@/lib/serializers';
 
 function normalizeModeloCodigo(body) {
   const values = [body?.modelo_codigo, body?.modeloCodigo, body?.placaCodigo];
@@ -19,6 +20,7 @@ function normalizeSourceType(body) {
 export async function POST(request) {
   try {
     const body = await readJson(request);
+    const usuario = getUsuarioAutenticado(request);
     const modeloCodigo = normalizeModeloCodigo(body);
     const detections = Array.isArray(body?.detections) ? body.detections : [];
     const sourceType = normalizeSourceType(body);
@@ -31,16 +33,22 @@ export async function POST(request) {
       return fail('Nenhuma deteccao para salvar', 400, 'VALIDATION_ERROR');
     }
 
+    if (!usuario?.id) {
+      return fail('Usuario autenticado e obrigatorio para criar relatorio', 401, 'AUTH_REQUIRED');
+    }
+
     const persisted = await persistirDeteccoesConfirmadas({
       modeloCodigo,
       detections,
       sourceType,
+      idUsuarioCriador: usuario.id,
     });
 
     return ok(
       {
         modelo: { codigo: modeloCodigo },
         placa: serializePlaca(persisted.placa),
+        relatorio: serializeRelatorio(persisted.relatorio),
         savedDefeitos: persisted.defeitos.map(serializeDefeito),
       },
       {
@@ -53,7 +61,11 @@ export async function POST(request) {
       return fail(error.message, 404, 'NOT_FOUND');
     }
 
-    if (error.message === 'Deteccao sem classe valida' || error.message === 'modelo_codigo e obrigatorio') {
+    if (
+      error.message === 'Deteccao sem classe valida' ||
+      error.message === 'modelo_codigo e obrigatorio' ||
+      error.message === 'id_usuario_criador e obrigatorio'
+    ) {
       return fail(error.message, 400, 'VALIDATION_ERROR');
     }
 
