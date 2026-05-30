@@ -6,7 +6,7 @@ import { api } from '@/services/api'
 import { toast } from 'sonner'
 
 const MODEL_PATH = 'runs/detect/train/weights/best.pt'
-const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm']
+const BATCH_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png']
 
 function formatConfidence(value) {
   const confidence = Number(value || 0)
@@ -21,6 +21,24 @@ function normalizeBBox(bbox) {
   if (x2 <= x1 || y2 <= y1) return null
 
   return [x1, y1, x2, y2]
+}
+
+function isAllowedBatchImage(file) {
+  const name = String(file?.name || '').toLowerCase()
+  return BATCH_IMAGE_EXTENSIONS.some((extension) => name.endsWith(extension))
+}
+
+function createBatchItem(file, status = 'pendente', error = '') {
+  return {
+    id: `${file.name}-${file.size}-${file.lastModified}`,
+    name: file.name,
+    size: file.size,
+    file,
+    status,
+    error,
+    detections: [],
+    savedCount: 0,
+  }
 }
 
 export default function InspecaoImagens() {
@@ -39,8 +57,15 @@ export default function InspecaoImagens() {
   const [fallbackClasses, setFallbackClasses] = useState([])
   const [selectedClasses, setSelectedClasses] = useState([])
   const [analysisMeta, setAnalysisMeta] = useState(null)
+  const [activeTab, setActiveTab] = useState('individual')
+  const [batchFiles, setBatchFiles] = useState([])
+  const [batchQueue, setBatchQueue] = useState([])
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false)
+  const [batchReport, setBatchReport] = useState(null)
+  const [batchSummary, setBatchSummary] = useState(null)
 
   const fileInputRef = useRef(null)
+  const batchFolderInputRef = useRef(null)
   const originalCanvasRef = useRef(null)
   const originalCanvasWrapperRef = useRef(null)
   const cropCanvasRef = useRef(null)
@@ -49,10 +74,6 @@ export default function InspecaoImagens() {
 
   const selectedImageUrl = useMemo(() => {
     if (!imageFile) return null
-    const lowerName = imageFile.name.toLowerCase()
-    // Evita tentar processar ZIP/video como imagem
-    if (lowerName.endsWith('.zip') || imageFile.type === 'application/zip') return null
-    if (VIDEO_EXTENSIONS.some((extension) => lowerName.endsWith(extension)) || imageFile.type.startsWith('video/')) return null
     return URL.createObjectURL(imageFile)
   }, [imageFile])
 
@@ -62,6 +83,12 @@ export default function InspecaoImagens() {
   }, [detections, selectedIndex])
 
   const selectedClassesSet = useMemo(() => new Set(selectedClasses), [selectedClasses])
+
+  const batchProgress = useMemo(() => {
+    if (!batchQueue.length) return 0
+    const finished = batchQueue.filter((item) => item.status === 'processado' || item.status === 'erro').length
+    return Math.round((finished / batchQueue.length) * 100)
+  }, [batchQueue])
 
   useEffect(() => {
     return () => {
@@ -264,19 +291,21 @@ export default function InspecaoImagens() {
   }, [drawOriginalCanvas, drawZoomCanvas])
 
   const handleSelectFile = () => {
+    if (activeTab === 'lote') {
+      batchFolderInputRef.current?.click()
+      return
+    }
+
     fileInputRef.current?.click()
   }
 
   const onImageChange = (event) => {
-    const file = event.target.files?.[0] || null
+    const files = Array.from(event.target.files || [])
+    const file = files[0] || null
     if (!file) return
 
-    const isImage = String(file.type || '').startsWith('image/')
-    const isZip = file.type === 'application/zip' || file.type === 'application/x-zip-compressed' || file.name.endsWith('.zip')
-    const isVideo = String(file.type || '').startsWith('video/') || VIDEO_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension))
-
-    if (!isImage && !isZip && !isVideo) {
-      toast.error('Selecione uma imagem (.jpg, .png), vídeo ou lote (.zip)')
+    if (files.length > 1 || !isAllowedBatchImage(file)) {
+      toast.error('Selecione apenas uma imagem .jpg ou .png')
       event.target.value = ''
       return
     }
@@ -284,8 +313,51 @@ export default function InspecaoImagens() {
     setImageFile(file)
     setDetections([])
     setSelectedIndex(0)
-    setStatusText(isZip ? 'Lote ZIP selecionado' : isVideo ? 'Video selecionado' : 'Aguardando imagem')
+    setStatusText('Imagem selecionada')
     setErrorText('')
+  }
+
+  const openBatchItemPreview = (item) => {
+    if (!item?.file) return
+
+    setActiveTab('individual')
+    setImageFile(item.file)
+    setDetections(Array.isArray(item.detections) ? item.detections : [])
+    setSavedDetections([])
+    setSavedPlaca(null)
+    setAnalysisMeta({ inputType: 'imagem' })
+    setSelectedIndex(0)
+    setErrorText(item.status === 'erro' ? item.error || '' : '')
+    setStatusText(item.status === 'processado' ? `Visualizando ${item.name}` : `Visualizando ${item.name} com erro`)
+  }
+
+  const handleBatchSelection = (event) => {
+    const fileList = event.target.files
+    const files = Array.from(fileList || [])
+
+    if (files.length === 0) {
+      toast.error('A pasta selecionada esta vazia')
+    }
+
+    setBatchFiles(files)
+    setBatchQueue(files.map((file) => createBatchItem(file)))
+    setBatchReport(null)
+    setBatchSummary(null)
+    setStatusText(
+      files.length
+        ? `${files.length} arquivo(s) selecionado(s)`
+        : 'Aguardando imagens do lote'
+    )
+  }
+
+  const clearBatch = () => {
+    setBatchFiles([])
+    setBatchQueue([])
+    setBatchReport(null)
+    setBatchSummary(null)
+    setStatusText('Aguardando imagem ou lote')
+
+    if (batchFolderInputRef.current) batchFolderInputRef.current.value = ''
   }
 
   const clearImage = () => {
@@ -301,6 +373,15 @@ export default function InspecaoImagens() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const clearActiveSelection = () => {
+    if (activeTab === 'lote') {
+      clearBatch()
+      return
+    }
+
+    clearImage()
   }
 
   const toggleClass = (item) => {
@@ -350,10 +431,6 @@ export default function InspecaoImagens() {
       setIsAnalyzing(true)
       setErrorText('')
       setStatusText('Processando...')
-      setDetections([])
-      setSavedDetections([])
-      setSavedPlaca(null)
-      setSelectedIndex(0)
 
       const formData = new FormData()
       formData.append('file', imageFile)
@@ -367,12 +444,18 @@ export default function InspecaoImagens() {
 
       const nextDetections = Array.isArray(result.detections) ? result.detections : []
       setDetections(nextDetections)
+      setSavedDetections([])
+      setSavedPlaca(null)
       setAnalysisMeta({ inputType: result.inputType || 'imagem' })
       setSelectedIndex(0)
-      setStatusText('Deteccao concluida. Aguardando salvamento explicito')
+      setStatusText(
+        nextDetections.length > 0
+          ? `Deteccao concluida. ${nextDetections.length} defeito(s) identificado(s)`
+          : 'Deteccao concluida. Nenhum defeito identificado'
+      )
       toast.success('Deteccao concluida com sucesso')
     } catch (error) {
-      setStatusText('Aguardando imagem ou lote')
+      setStatusText('Falha na deteccao individual')
       setErrorText(error.message || 'Nao foi possivel processar a imagem')
       toast.error(error.message || 'Nao foi possivel processar a imagem')
     } finally {
@@ -396,7 +479,7 @@ export default function InspecaoImagens() {
       const result = await api.salvarDeteccoes({
         modelo_codigo: selectedModelCodigo,
         detections,
-        source_type: analysisMeta?.inputType || (String(imageFile?.type || '').startsWith('video/') ? 'video' : 'imagem'),
+        source_type: analysisMeta?.inputType || 'imagem',
       })
 
       const persisted = Array.isArray(result?.savedDefeitos) ? result.savedDefeitos : []
@@ -431,6 +514,83 @@ export default function InspecaoImagens() {
     toast.info('Deteccoes descartadas')
   }
 
+  const runBatchProcessing = async () => {
+    if (!selectedModelCodigo || models.length === 0) {
+      toast.error('Selecione um modelo de placa')
+      return
+    }
+
+    if (batchFiles.length === 0) {
+      toast.error('Selecione uma pasta com imagens .jpg ou .png para processar')
+      setStatusText('Nenhuma imagem valida selecionada')
+      return
+    }
+
+    const classesArray = [...selectedClasses]
+    if (classesArray.length === 0) {
+      toast.error('Selecione ao menos um defeito')
+      return
+    }
+
+    try {
+      setIsBatchProcessing(true)
+      setErrorText('')
+      setBatchReport(null)
+      setBatchSummary(null)
+      setStatusText('Processando lote...')
+      setBatchQueue(batchFiles.map((file) => createBatchItem(file, 'processando')))
+
+      const nextQueue = []
+      for (const file of batchFiles) {
+        if (!isAllowedBatchImage(file)) {
+          nextQueue.push(createBatchItem(file, 'erro', 'Formato nao suportado. Use apenas .jpg ou .png'))
+          continue
+        }
+
+        try {
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('modelo_codigo', selectedModelCodigo)
+          formData.append('classes', JSON.stringify(classesArray))
+
+          const result = await api.analisarImagem(formData)
+          const detectionsResult = Array.isArray(result?.detections) ? result.detections : []
+
+          nextQueue.push({
+            ...createBatchItem(file, 'processado', ''),
+            detections: detectionsResult,
+            savedCount: Array.isArray(result?.savedDefeitos) ? result.savedDefeitos.length : 0,
+          })
+        } catch (error) {
+          nextQueue.push(createBatchItem(file, 'erro', error.message || 'Nao foi possivel processar a imagem'))
+        }
+
+        setBatchQueue([...nextQueue])
+      }
+
+      setBatchQueue(nextQueue)
+      setBatchSummary({
+        totalFiles: nextQueue.length,
+        totalProcessed: nextQueue.filter((item) => item.status === 'processado').length,
+        totalFailed: nextQueue.filter((item) => item.status === 'erro').length,
+        totalPersisted: nextQueue.reduce((total, item) => total + (item.savedCount || 0), 0),
+      })
+      setStatusText(`Lote finalizado. ${nextQueue.filter((item) => item.status === 'processado').length} processado(s)`)
+      toast.success('Processamento em lote concluido')
+    } catch (error) {
+      setBatchQueue((current) => current.map((item) => (item.status === 'processando' ? { ...item, status: 'erro', error: error.message } : item)))
+      setStatusText('Falha no processamento em lote')
+      setErrorText(error.message || 'Nao foi possivel processar o lote')
+      toast.error(error.message || 'Nao foi possivel processar o lote')
+    } finally {
+      setIsBatchProcessing(false)
+    }
+  }
+
+  const hasActiveSelection = activeTab === 'lote' ? batchQueue.length > 0 : Boolean(imageFile)
+  const isActiveProcessing = activeTab === 'lote' ? isBatchProcessing : isAnalyzing
+  const canExecuteActiveSelection = activeTab === 'lote' ? batchFiles.length > 0 : Boolean(imageFile)
+
   return (
     <AppShell breadcrumb="Análise / Scanner de PCBs">
       <div className="p-6 h-[calc(100vh-48px)] flex flex-col gap-6 overflow-hidden relative">
@@ -459,8 +619,17 @@ export default function InspecaoImagens() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jpg,.jpeg,.png,.zip,.mp4,.mov,.avi,.mkv,.webm,image/jpeg,image/png,application/zip,video/*"
+              accept=".jpg,.png,image/jpeg,image/png"
               onChange={onImageChange}
+              className="hidden"
+            />
+            <input
+              ref={batchFolderInputRef}
+              type="file"
+              multiple
+              webkitdirectory=""
+              directory=""
+              onChange={handleBatchSelection}
               className="hidden"
             />
             
@@ -468,12 +637,12 @@ export default function InspecaoImagens() {
               onClick={handleSelectFile}
               className="px-4 py-2.5 bg-bg-elevated border border-border text-text-primary font-mono text-sm font-black uppercase rounded-lg hover:border-amber transition-all cursor-pointer"
             >
-              {imageFile ? 'Trocar arquivo' : 'Carregar arquivo'}
+              {hasActiveSelection ? 'Trocar arquivo' : 'Carregar arquivo'}
             </button>
 
-            {imageFile && (
+            {hasActiveSelection && (
               <button
-                onClick={clearImage}
+                onClick={clearActiveSelection}
                 className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-sm font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
               >
                 Remover
@@ -481,11 +650,11 @@ export default function InspecaoImagens() {
             )}
 
             <button
-              onClick={runDetection}
-                disabled={isAnalyzing || !imageFile || !selectedModelCodigo}
+              onClick={activeTab === 'lote' ? runBatchProcessing : runDetection}
+              disabled={isActiveProcessing || !canExecuteActiveSelection || !selectedModelCodigo}
               className="px-4 py-2.5 bg-amber disabled:opacity-40 text-black font-mono text-sm font-black uppercase rounded-lg hover:bg-amber-600 transition-all cursor-pointer"
             >
-              {isAnalyzing ? 'Processando...' : 'Executar deteccao'}
+              {isActiveProcessing ? 'Processando...' : activeTab === 'lote' ? 'Executar lote' : 'Executar deteccao'}
             </button>
           </div>
 
@@ -494,6 +663,23 @@ export default function InspecaoImagens() {
             <p className="text-sm text-text-primary font-mono">Modelo: {MODEL_PATH}</p>
             <p className="text-sm text-text-secondary font-mono">Selecionado: {selectedModelCodigo || 'nenhum'}</p>
           </div>
+        </div>
+
+        <div className="bg-bg-panel border border-border rounded-2xl p-2 shrink-0 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('individual')}
+            className={`px-4 py-2 rounded-lg text-xs font-mono font-black uppercase transition-colors ${activeTab === 'individual' ? 'bg-amber text-black' : 'bg-bg-elevated text-text-secondary border border-border'}`}
+          >
+            Imagem individual
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('lote')}
+            className={`px-4 py-2 rounded-lg text-xs font-mono font-black uppercase transition-colors ${activeTab === 'lote' ? 'bg-amber text-black' : 'bg-bg-elevated text-text-secondary border border-border'}`}
+          >
+            Processamento em lote
+          </button>
         </div>
 
         <div className="bg-bg-panel border border-border rounded-2xl p-4 shrink-0">
@@ -536,6 +722,94 @@ export default function InspecaoImagens() {
           </div>
         </div>
 
+        {activeTab === 'lote' && (
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 min-h-0">
+            <div className="bg-bg-panel border border-border rounded-2xl p-4 flex flex-col gap-4 min-h-0">
+              <div className="border border-border rounded-lg p-3 bg-bg-base/60">
+                <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Total selecionado</p>
+                <p className="text-2xl font-mono text-amber">{batchQueue.length}</p>
+                <p className="text-xs font-mono text-text-secondary">{batchFiles.length} arquivo(s) aguardando validação</p>
+              </div>
+
+              <div className="border border-border rounded-lg p-3 bg-bg-base/60">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Progresso</p>
+                  <p className="text-xs font-mono text-amber">{batchProgress}%</p>
+                </div>
+                <div className="h-2 bg-bg-elevated rounded overflow-hidden">
+                  <div className="h-full bg-amber transition-all" style={{ width: `${batchProgress}%` }} />
+                </div>
+              </div>
+
+              {batchReport && (
+                <div className="border border-success-border rounded-lg p-3 bg-success-bg/20">
+                  <p className="text-xs uppercase font-black tracking-widest text-success-text">Relatorio criado</p>
+                  <p className="text-sm font-mono text-text-primary">#{batchReport.id}</p>
+                  <p className="text-xs font-mono text-text-secondary">Usuario #{batchReport.id_usuario_criador}</p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mt-auto">
+                <button
+                  type="button"
+                  onClick={clearBatch}
+                  disabled={isBatchProcessing}
+                  className="px-4 py-2.5 bg-bg-elevated border border-critical-border text-critical-text font-mono text-sm font-black uppercase rounded-lg hover:bg-critical-bg transition-all cursor-pointer"
+                >
+                  Limpar
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-bg-panel border border-border rounded-2xl flex flex-col min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-border bg-bg-elevated/20 flex items-center justify-between">
+                <span className="text-sm font-black uppercase tracking-widest text-text-secondary">Arquivos selecionados</span>
+                {batchSummary && (
+                  <span className="text-xs font-mono text-text-secondary">
+                    {batchSummary.totalProcessed} processados · {batchSummary.totalFailed} erros · {batchSummary.totalPersisted} defeitos
+                  </span>
+                )}
+              </div>
+              <div className="overflow-auto min-h-0 divide-y divide-border">
+                {batchQueue.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openBatchItemPreview(item)}
+                    className="w-full p-3 grid grid-cols-[1fr_auto] gap-3 items-center text-left hover:bg-bg-elevated/40 transition-colors cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-mono text-text-primary truncate">{item.name}</p>
+                      <p className="text-xs font-mono text-text-secondary">
+                        {item.detections.length} deteccoes · {item.savedCount} persistidos
+                      </p>
+                      {item.error && <p className="text-xs font-mono text-critical-text truncate">{item.error}</p>}
+                    </div>
+                    <span className={`text-xs font-mono uppercase px-2 py-1 rounded border ${
+                      item.status === 'processado'
+                        ? 'text-success-text border-success-border bg-success-bg/20'
+                        : item.status === 'erro'
+                          ? 'text-critical-text border-critical-border bg-critical-bg/20'
+                          : item.status === 'processando'
+                            ? 'text-amber border-amber/40 bg-amber/10'
+                            : 'text-text-muted border-border bg-bg-elevated'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </button>
+                ))}
+
+                {!batchQueue.length && (
+                  <div className="h-full min-h-[260px] flex items-center justify-center text-text-muted text-sm uppercase font-mono">
+                    Nenhuma imagem selecionada
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'individual' && (
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
           <div className="bg-bg-panel border border-border rounded-3xl flex flex-col overflow-hidden min-h-0">
             <div className="p-4 border-b border-border bg-bg-elevated/20">
@@ -543,30 +817,9 @@ export default function InspecaoImagens() {
             </div>
             
             <div ref={originalCanvasWrapperRef} className="flex-1 flex items-center justify-center p-4 bg-black/40 min-h-0 overflow-auto">
-              {!imageFile && <div className="text-text-muted text-sm uppercase font-mono">Aguardando imagem ou lote</div>}
-              
-              {imageFile && (imageFile.name.endsWith('.zip') || imageFile.type === 'application/zip') && (
-                <div className="flex flex-col items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-amber">
-                    <path d="M21 8v13H3V3h7l5 5zm-7 5h-2v-2h2v2zm0 4h-2v-2h2v2zm2-2h2v-2h-2v2zm0 4h2v-2h-2v2z" />
-                  </svg>
-                  <span className="text-amber text-base uppercase font-mono font-bold">Lote ZIP Selecionado</span>
-                  <span className="text-text-muted text-sm font-mono">{imageFile.name}</span>
-                </div>
-              )}
+              {!imageFile && <div className="text-text-muted text-sm uppercase font-mono">Aguardando imagem</div>}
 
-              {imageFile && (String(imageFile.type || '').startsWith('video/') || VIDEO_EXTENSIONS.some((extension) => imageFile.name.toLowerCase().endsWith(extension))) && (
-                <div className="flex flex-col items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-amber">
-                    <path d="M15 10l4.5-2.5v9L15 14v-4z" />
-                    <rect x="3" y="6" width="12" height="12" rx="2" />
-                  </svg>
-                  <span className="text-amber text-base uppercase font-mono font-bold">Video selecionado</span>
-                  <span className="text-text-muted text-sm font-mono">{imageFile.name}</span>
-                </div>
-              )}
-
-              {imageFile && !imageFile.name.endsWith('.zip') && imageFile.type !== 'application/zip' && selectedImageUrl && (
+              {imageFile && selectedImageUrl && (
                 <canvas ref={originalCanvasRef} className="max-w-full rounded-lg border border-border" />
               )}
             </div>
@@ -612,8 +865,37 @@ export default function InspecaoImagens() {
                 Proximo defeito &gt;
               </button>
             </div>
+
+            <div className="px-4 pb-4 border-t border-border bg-bg-base/40">
+              <div className="pt-3 flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Defeitos detectados</p>
+                <p className="text-xs font-mono text-text-secondary">{detections.length} resultado(s)</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {detections.map((detection, index) => {
+                  const isSelected = index === selectedIndex
+                  return (
+                    <button
+                      key={`${detection.label || 'defeito'}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedIndex(index)}
+                      className={`px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer ${isSelected ? 'border-amber bg-amber/10 text-amber' : 'border-border bg-bg-elevated text-text-secondary hover:border-amber'}`}
+                    >
+                      <p className="text-xs font-black uppercase font-mono">{detection.label || 'defeito'}</p>
+                      <p className="text-[11px] font-mono">Conf: {formatConfidence(detection.confidence)}</p>
+                    </button>
+                  )
+                })}
+
+                {!detections.length && (
+                  <p className="text-sm text-text-muted font-mono">Nenhum defeito detectado ainda</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
+        )}
 
         <div className="bg-bg-panel border border-border p-4 rounded-2xl shadow-2xl shrink-0 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -654,4 +936,3 @@ export default function InspecaoImagens() {
     </AppShell>
   )
 }
-

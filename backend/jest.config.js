@@ -12,6 +12,9 @@ const customJestConfig = {
   roots: ['<rootDir>/../tests/backend'],
   testMatch: ['<rootDir>/../tests/backend/**/*.test.js'],
   moduleDirectories: ['node_modules', '<rootDir>/node_modules'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
 };
 
 // Exporta a configuração traduzida pelo Next.js

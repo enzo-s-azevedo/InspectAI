@@ -124,6 +124,9 @@ export const api = {
   analisarImagem: (formData) =>
     requestForm('/detection', formData),
 
+  processarLoteImagens: (formData) =>
+    requestForm('/detection/batch', formData),
+
   salvarDeteccoes: (body) =>
     requestBody('POST', '/detection/save', body),
 

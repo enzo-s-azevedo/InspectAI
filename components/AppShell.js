@@ -25,7 +25,6 @@ export default function AppShell({ children, breadcrumb }) {
     analise: [
       { name: 'Dashboard', icon: <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>, path: '/' },
       { name: 'Imagens',   icon: <path d="M21 19V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-3 9l4.5-6 3.5 4.5 2.5-3 4.5 4.5H5.5z"/>, path: '/imagens' },
-      { name: 'Vídeos',    icon: <path d="M23 7l-7 5 7 5V7zM1 5h14v14H1V5z"/>, path: '/videos' },
     ],
     controle: [
       { name: 'Defeitos',   icon: <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>, path: '/defeitos' },

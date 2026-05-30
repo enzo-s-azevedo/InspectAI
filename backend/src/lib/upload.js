@@ -1,14 +1,19 @@
 import JSZip from 'jszip';
 
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
+const ALLOWED_BATCH_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png']);
 const ALLOWED_VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.avi', '.mkv', '.webm']);
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([...ALLOWED_IMAGE_EXTENSIONS, '.zip', ...ALLOWED_VIDEO_EXTENSIONS]);
 
-function getLowerExtension(fileName) {
+export function getLowerExtension(fileName) {
   const value = String(fileName || '').toLowerCase();
   const lastDot = value.lastIndexOf('.');
   if (lastDot < 0) return '';
   return value.slice(lastDot);
+}
+
+export function isAllowedBatchImageName(fileName) {
+  return ALLOWED_BATCH_IMAGE_EXTENSIONS.has(getLowerExtension(fileName));
 }
 
 function isJpeg(buffer) {
@@ -73,6 +78,30 @@ export async function readAndValidateUpload(file) {
       buffer,
       mimeType: extension === '.png' ? 'image/png' : 'image/jpeg',
     },
+  };
+}
+
+export async function readAndValidateBatchImage(file) {
+  if (!file || typeof file.arrayBuffer !== 'function') {
+    throw new Error('Nenhum arquivo valido foi enviado');
+  }
+
+  const extension = getLowerExtension(file.name);
+  if (!ALLOWED_BATCH_IMAGE_EXTENSIONS.has(extension)) {
+    throw new Error(`Formato invalido para ${file.name || 'arquivo'}. Envie apenas .jpg ou .png`);
+  }
+
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  if (buffer.length === 0) {
+    throw new Error(`Arquivo vazio: ${file.name || 'arquivo'}`);
+  }
+
+  assertValidImageBuffer(buffer, file.name || 'upload.jpg');
+
+  return {
+    name: file.name || 'upload.jpg',
+    buffer,
+    mimeType: extension === '.png' ? 'image/png' : 'image/jpeg',
   };
 }
 
