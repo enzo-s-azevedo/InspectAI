@@ -50,7 +50,19 @@ usuario.id
 - `criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`
 - `atualizado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`
 
-`id_usuario_criador` identifica o usuario que executou o lote e deve ser preenchido automaticamente na criacao do relatorio. Esse campo nao deve ser alterado em atualizacoes. `id_usuario_ultimo_acesso` registra o ultimo administrador que modificou o relatorio.
+#### Regras de Rastreabilidade (Issue #28)
+
+1. **`id_usuario_criador`**:
+   - Identifica o usuário (operador) que executou o lote ou salvou a detecção.
+   - Deve ser preenchido **automaticamente** no momento da criação.
+   - **Nunca** deve ser alterado em operações subsequentes (imutabilidade).
+2. **`id_usuario_ultimo_acesso`**:
+   - Registra o ID do último administrador que realizou modificações manuais no relatório.
+   - Pode ser `NULL` se o relatório nunca foi editado após a criação.
+   - Deve ser atualizado automaticamente em qualquer `UPDATE` via API administrativa.
+3. **Remoção de Campos Legados**:
+   - Os campos `usuario_id` e `status` foram removidos desta tabela para evitar redundância e centralizar a rastreabilidade nos novos campos de FK.
+
 
 Relacionamentos:
 

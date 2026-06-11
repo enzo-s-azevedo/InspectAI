@@ -158,3 +158,16 @@ Cria o relatorio no inicio da execucao, associa o usuario autenticado como criad
 ### `PATCH /api/relatorios/:id`
 
 Atualiza dados administrativos do relatorio e registra `id_usuario_ultimo_acesso` sem alterar o criador original.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
+- `id_usuario_criador` é imutável e será ignorado se enviado no body.
+- `id_usuario_ultimo_acesso` é preenchido automaticamente com o ID do administrador autenticado.
+
+**Body:**
+```json
+{
+  "placa_id": 12
+}
+```
+
