@@ -143,7 +143,9 @@ export const api = {
   deletarUsuario: (id) =>
     requestBody('DELETE', `/usuarios/${id}`),
 
-
+// Relatórios
+  getRelatorios: () =>
+    request('/relatorios'),
 
 
 }
