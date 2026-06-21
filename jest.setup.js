@@ -39,3 +39,15 @@ if (typeof global.Response === 'undefined') {
     }
   };
 }
+// jest.setup.js
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: (data, init = {}) => ({
+      status: init.status || 200,
+      headers: new global.Headers(init.headers || {}),
+      body: JSON.stringify(data),
+      json: async () => data,
+      ...data, // mantém compatibilidade com testes que leem campos direto do retorno
+    }),
+  },
+}));
