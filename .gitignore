@@ -17,3 +17,10 @@ inspectai_mysql_data/
 .env
 .env.local
 !.env.example
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
