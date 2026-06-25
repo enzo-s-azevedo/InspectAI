@@ -171,3 +171,129 @@ Atualiza dados administrativos do relatorio e registra `id_usuario_ultimo_acesso
 }
 ```
 
+---
+
+### `POST /api/auth/login`
+
+Realiza a autenticação de usuários no sistema.
+
+**Body:**
+```json
+{
+  "email": "admin@inspectai.com",
+  "senha": "senha-secreta"
+}
+```
+
+**Retorno de sucesso (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "nome": "Admin",
+    "email": "admin@inspectai.com",
+    "cargo": "ADMINISTRADOR",
+    "permissoes": ["dashboard:visualizar", "usuarios:gerenciar", "modelos:gerenciar", "relatorios:gerenciar"],
+    "token": "JWT_TOKEN_STRING"
+  }
+}
+```
+
+---
+
+### `GET /api/usuarios`
+
+Lista todos os usuários cadastrados no sistema.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
+
+**Retorno de sucesso (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nome": "Admin",
+      "email": "admin@inspectai.com",
+      "cargo": "ADMINISTRADOR",
+      "criadoEm": "2026-06-25T18:14:00.000Z"
+    }
+  ],
+  "meta": { "total": 1 },
+  "error": null
+}
+```
+
+---
+
+### `POST /api/usuarios`
+
+Cadastra um novo usuário no sistema.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
+
+**Body:**
+```json
+{
+  "nome": "Funcionario Teste",
+  "email": "func@inspectai.com",
+  "senha": "senha-secreta-func",
+  "cargo": "FUNCIONARIO"
+}
+```
+
+**Retorno de sucesso (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "nome": "Funcionario Teste",
+    "email": "func@inspectai.com",
+    "cargo": "FUNCIONARIO",
+    "criadoEm": "2026-06-25T18:14:00.000Z"
+  },
+  "meta": {},
+  "error": null
+}
+```
+
+---
+
+### `GET /api/usuarios/:id`
+
+Busca detalhes de um usuário específico por ID.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
+
+---
+
+### `PUT /api/usuarios/:id`
+
+Atualiza dados ou cargo de um usuário existente.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
+
+**Body:**
+```json
+{
+  "nome": "Nome Atualizado",
+  "email": "atualizado@inspectai.com",
+  "cargo": "FUNCIONARIO"
+}
+```
+
+---
+
+### `DELETE /api/usuarios/:id`
+
+Remove um usuário do sistema.
+
+**Restrições:**
+- Apenas usuários com cargo `ADMINISTRADOR` podem acessar esta rota.
