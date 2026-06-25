@@ -30,22 +30,7 @@ Para detalhes adicionais de setup ou execução nativa passo a passo, veja [INST
 
 ## 📂 Organização do Projeto
 
-Para uma visualização detalhada do mapeamento de arquivos e responsabilidades das pastas, consulte [FINAL_STRUCTURE.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/FINAL_STRUCTURE.md).
-
----
-
-## 💾 Banco de Dados
-
-O banco de dados oficial é o **PostgreSQL Neon (Serverless)**. O mapeamento relacional utiliza o **Prisma ORM**.
-
-As tabelas oficiais do sistema são:
-- `usuario`
-- `modelo`
-- `placa`
-- `defeito`
-- `relatorio`
-- `relatorio_defeito`
-- `relatorio_imagem`
+### 2. Banco de Dados de Defeitos
 
 Para detalhes de regras de integridade relacional, regras de rastreabilidade (imutabilidade do criador vs histórico do editor administrador), veja [DATABASE.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/backend/DATABASE.md).
 
@@ -53,7 +38,7 @@ Para detalhes de regras de integridade relacional, regras de rastreabilidade (im
 
 ## 🔌 Contrato de APIs
 
-Todas as requisições e respostas JSON do backend seguem um envelope padrão. Para ver as especificações completas de rotas, corpos de requisição (`body`) e retornos, consulte [API_CONTRACT.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/API_CONTRACT.md) ou acesse a rota `/api/swagger` (ou a página visual `/api-docs` no backend) para a documentação interativa baseada em **Swagger UI**.
+### 3. Controle de Usuários
 
 ---
 
@@ -65,7 +50,7 @@ Instruções operacionais sobre como logar, cadastrar novos modelos, efetuar ins
 
 ## 🧪 Execução de Testes
 
-Os testes podem ser executados localmente por meio dos seguintes comandos:
+### 4. Geração de Relatórios
 
 ### Testes do Frontend:
 ```bash
