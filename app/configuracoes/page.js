@@ -13,6 +13,9 @@ export default function AdministracaoModelosPage() {
   const [codigo, setCodigo] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [editingCodigo, setEditingCodigo] = useState('')
+  const [editingValue, setEditingValue] = useState('')
+  const [busyCodigo, setBusyCodigo] = useState('')
   const [error, setError] = useState('')
   const [isAuthorized, setIsAuthorized] = useState(false)
 
@@ -70,6 +73,63 @@ export default function AdministracaoModelosPage() {
       toast.error(err.message || 'Erro ao cadastrar modelo')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const startEditing = (modelo) => {
+    setEditingCodigo(modelo.codigo)
+    setEditingValue(modelo.codigo)
+  }
+
+  const cancelEditing = () => {
+    setEditingCodigo('')
+    setEditingValue('')
+  }
+
+  const handleUpdate = async (event) => {
+    event.preventDefault()
+
+    const novoCodigo = editingValue.trim()
+    if (!novoCodigo) {
+      toast.error('Informe o novo codigo do modelo')
+      return
+    }
+
+    if (novoCodigo !== editingCodigo && models.some((modelo) => modelo.codigo === novoCodigo)) {
+      toast.error('Codigo de modelo ja existe')
+      return
+    }
+
+    try {
+      setBusyCodigo(editingCodigo)
+      const updated = await api.editarModelo({
+        codigo_atual: editingCodigo,
+        novo_codigo: novoCodigo,
+      })
+      setModels((current) => current.map((modelo) => (modelo.codigo === editingCodigo ? updated : modelo)).sort((a, b) => a.codigo.localeCompare(b.codigo)))
+      cancelEditing()
+      toast.success('Modelo atualizado com sucesso')
+    } catch (err) {
+      toast.error(err.message || 'Erro ao atualizar modelo')
+    } finally {
+      setBusyCodigo('')
+    }
+  }
+
+  const handleDelete = async (codigoModelo) => {
+    const confirmed = window.confirm(`Remover o modelo ${codigoModelo}?`)
+    if (!confirmed) return
+
+    try {
+      setBusyCodigo(codigoModelo)
+      await api.deletarModelo(codigoModelo)
+      setModels((current) => current.filter((modelo) => modelo.codigo !== codigoModelo))
+      if (editingCodigo === codigoModelo) cancelEditing()
+      toast.success('Modelo removido com sucesso')
+    } catch (err) {
+      toast.error(err.message || 'Erro ao remover modelo')
+    } finally {
+      setBusyCodigo('')
     }
   }
 
@@ -145,13 +205,58 @@ export default function AdministracaoModelosPage() {
               ) : models.length > 0 ? (
                 models.map((modelo) => (
                   <div key={modelo.codigo} className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-white/[0.03] transition-colors">
-                    <div>
-                      <p className="text-base font-black text-white uppercase tracking-tight">{modelo.codigo}</p>
-                      <p className="text-sm text-white/40 font-mono">{Array.isArray(modelo.placas) ? modelo.placas.length : 0} placa(s) vinculada(s)</p>
-                    </div>
-                    <span className="px-3 py-1 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 font-mono text-xs uppercase font-black">
-                      modelo
-                    </span>
+                    {editingCodigo === modelo.codigo ? (
+                      <form onSubmit={handleUpdate} className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input
+                          value={editingValue}
+                          onChange={(event) => setEditingValue(event.target.value)}
+                          className="min-w-0 flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-mono text-white outline-none focus:border-fuchsia-500 transition-colors"
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="submit"
+                            disabled={busyCodigo === modelo.codigo}
+                            className="px-3 py-2 bg-fuchsia-500 text-black rounded-lg text-[10px] font-black uppercase font-mono disabled:opacity-50 cursor-pointer"
+                          >
+                            Salvar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditing}
+                            disabled={busyCodigo === modelo.codigo}
+                            className="px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-[10px] font-black uppercase font-mono disabled:opacity-50 cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-base font-black text-white uppercase tracking-tight">{modelo.codigo}</p>
+                          <p className="text-sm text-white/40 font-mono">{Array.isArray(modelo.placas) ? modelo.placas.length : 0} placa(s) vinculada(s)</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startEditing(modelo)}
+                            disabled={Boolean(busyCodigo)}
+                            className="px-3 py-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300 font-mono text-[10px] uppercase font-black disabled:opacity-50 cursor-pointer"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(modelo.codigo)}
+                            disabled={Boolean(busyCodigo)}
+                            className="px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 font-mono text-[10px] uppercase font-black disabled:opacity-50 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))
               ) : (

@@ -84,6 +84,12 @@ export const api = {
   criarModelo: (body) =>
     requestBody('POST', '/modelos', body),
 
+  editarModelo: (body) =>
+    requestBody('PUT', '/modelos', body),
+
+  deletarModelo: (codigo) =>
+    requestBody('DELETE', '/modelos', { codigo }),
+
   // Dashboard (usa os endpoints existentes para montar as métricas)
   getDashboard: async () => {
     const [defeitos, placas, modelos] = await Promise.all([

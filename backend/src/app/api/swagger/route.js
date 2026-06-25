@@ -212,9 +212,10 @@ export async function GET() {
               'application/json': {
                 example: {
                   placa_id: 1,
-                  classe_defeito: 'solda-fria',
-                  status_confirmacao: 'confirmado',
-                  tipo: 'video',
+	                  classe_defeito: 'solda-fria',
+	                  status_confirmacao: 'confirmado',
+	                  classificacao: 'real',
+	                  tipo: 'video',
                 },
               },
             },
@@ -227,7 +228,7 @@ export async function GET() {
           requestBody: {
             content: {
               'application/json': {
-                example: { id: 1, status_confirmacao: 'falso_positivo' },
+	                example: { id: 1, status_confirmacao: 'falso_positivo', classificacao: 'falso_positivo' },
               },
             },
           },

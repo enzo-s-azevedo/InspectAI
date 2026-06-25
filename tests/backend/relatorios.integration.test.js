@@ -67,6 +67,7 @@ describe('Relatorios gerados por lote', () => {
           id: 51,
           classeDefeito: 'trinca',
           statusConfirmacao: 'confirmado',
+          classificacao: 'real',
           tipo: 'imagem',
           dataHora: null,
           placaId: 11,
@@ -102,11 +103,80 @@ describe('Relatorios gerados por lote', () => {
         defeitoId: 51,
       },
     });
+    expect(client.defeito.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          statusConfirmacao: 'confirmado',
+          classificacao: 'real',
+        }),
+      })
+    );
     expect(body.data.relatorio).toMatchObject({
       id: 31,
       placa_id: 11,
       id_usuario_criador: 7,
       id_usuario_ultimo_acesso: null,
+    });
+  });
+
+  it('salva deteccao marcada como falso positivo no banco de defeitos', async () => {
+    const client = {
+      modelo: {
+        findUnique: jest.fn().mockResolvedValue({ codigo: 'ABC-123' }),
+      },
+      placa: {
+        create: jest.fn().mockResolvedValue({ id: 11, modeloCodigo: 'ABC-123' }),
+      },
+      relatorio: {
+        create: jest.fn().mockResolvedValue({
+          id: 31,
+          placaId: 11,
+          idUsuarioCriador: 7,
+          idUsuarioUltimoAcesso: null,
+          criadoEm: new Date('2026-05-30T10:00:00Z'),
+          atualizadoEm: new Date('2026-05-30T10:00:00Z'),
+        }),
+      },
+      defeito: {
+        create: jest.fn().mockResolvedValue({
+          id: 52,
+          classeDefeito: 'sombra',
+          statusConfirmacao: 'falso_positivo',
+          classificacao: 'falso_positivo',
+          tipo: 'imagem',
+          dataHora: null,
+          placaId: 11,
+        }),
+      },
+      relatorioDefeito: {
+        create: jest.fn().mockResolvedValue({ id: 72, relatorioId: 31, defeitoId: 52 }),
+      },
+    };
+
+    mockPrisma.$transaction.mockImplementation((callback) => callback(client));
+
+    const res = await salvarDeteccoes(
+      makeJsonRequest('http://localhost:3000/api/detection/save', {
+        modelo_codigo: 'ABC-123',
+        detections: [{ label: 'sombra', classificacao: 'falso_positivo' }],
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(client.defeito.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          classeDefeito: 'sombra',
+          statusConfirmacao: 'falso_positivo',
+          classificacao: 'falso_positivo',
+        }),
+      })
+    );
+    expect(body.data.savedDefeitos[0]).toMatchObject({
+      classe_defeito: 'sombra',
+      status_confirmacao: 'falso_positivo',
+      classificacao: 'falso_positivo',
     });
   });
 
