@@ -18,7 +18,7 @@ model Modelo {
 model Placa {
   id           Int    @id @default(autoincrement())
   modeloCodigo String @map("modelo_codigo") @db.VarChar(100)
-  modelo       Modelo @relation(fields: [modeloCodigo], references: [codigo])
+  modelo       Modelo @relation(fields: [modeloCodigo], references: [codigo], onDelete: Cascade, onUpdate: Cascade)
 
   defeitos Defeito[]
   relatorios Relatorio[]
@@ -31,6 +31,7 @@ model Defeito {
   id                Int    @id @default(autoincrement())
   classeDefeito     String? @map("classe_defeito") @db.VarChar(255)
   statusConfirmacao String @default("confirmado") @map("status_confirmacao") @db.VarChar(50)
+  classificacao     String @default("real") @db.VarChar(50)
   tipo              String @default("imagem") @db.VarChar(50)
   dataHora          DateTime? @default(now()) @map("data_hora") @db.Timestamp(0)
   placaId           Int    @map("placa_id")
@@ -39,6 +40,7 @@ model Defeito {
 
   @@index([placaId], map: "idx_defeito_placa_id")
   @@index([statusConfirmacao], map: "idx_defeito_status_confirmacao")
+  @@index([classificacao], map: "idx_defeito_classificacao")
   @@index([tipo], map: "idx_defeito_tipo")
   @@map("defeito")
 }

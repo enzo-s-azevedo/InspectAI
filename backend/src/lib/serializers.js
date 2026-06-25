@@ -24,6 +24,7 @@ export function serializePlaca(placa) {
           id: defeito.id,
           classe_defeito: defeito.classeDefeito,
           status_confirmacao: defeito.statusConfirmacao,
+          classificacao: defeito.classificacao,
           tipo: defeito.tipo,
           data_hora: defeito.dataHora,
         }))
@@ -38,6 +39,7 @@ export function serializeDefeito(defeito) {
     id: defeito.id,
     classe_defeito: defeito.classeDefeito,
     status_confirmacao: defeito.statusConfirmacao,
+    classificacao: defeito.classificacao,
     tipo: defeito.tipo,
     data_hora: defeito.dataHora,
     placa_id: defeito.placaId,

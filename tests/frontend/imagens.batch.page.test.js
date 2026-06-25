@@ -53,6 +53,13 @@ describe('Aba de processamento em lote de imagens', () => {
       ],
       inputType: 'imagem',
     })
+    api.salvarDeteccoes.mockResolvedValue({
+      placa: { id: 1, modelo_codigo: 'PCB-001' },
+      savedDefeitos: [
+        { id: 1, classe_defeito: 'trinca', classificacao: 'real', status_confirmacao: 'confirmado' },
+        { id: 2, classe_defeito: 'furo', classificacao: 'falso_positivo', status_confirmacao: 'falso_positivo' },
+      ],
+    })
 
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -252,8 +259,87 @@ describe('Aba de processamento em lote de imagens', () => {
     expect(screen.getByText('Defeito 1 de 2')).toBeInTheDocument()
     expect(screen.getByText('Classe: trinca')).toBeInTheDocument()
     expect(screen.getByText('Confianca: 0.93')).toBeInTheDocument()
+    expect(screen.getByText('Classificacao: Confirmado')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^confirmado$/i })).toBeInTheDocument()
     expect(screen.getByText('Defeitos detectados')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /trinca/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /furo/i })).toBeInTheDocument()
+  })
+
+  it('permite marcar uma deteccao como falso positivo antes de salvar no relatorio', async () => {
+    const { container } = render(<InspecaoImagens />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'PCB-001' })).toBeInTheDocument()
+    })
+
+    const individualInput = container.querySelector('input[type="file"]:not([multiple])')
+    const validPng = new File(['conteudo'], 'placa-a.png', { type: 'image/png' })
+
+    fireEvent.change(individualInput, {
+      target: {
+        files: [validPng],
+      },
+    })
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'PCB-001' } })
+    fireEvent.click(screen.getByRole('button', { name: /executar deteccao/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Defeito 1 de 2')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /furo/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^falso positivo$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /salvar defeitos detectados/i }))
+
+    await waitFor(() => {
+      expect(api.salvarDeteccoes).toHaveBeenCalledTimes(1)
+    })
+
+    const payload = api.salvarDeteccoes.mock.calls[0][0]
+    expect(payload.detections).toMatchObject([
+      { label: 'trinca', classificacao: 'real', status_confirmacao: 'confirmado' },
+      { label: 'furo', classificacao: 'falso_positivo', status_confirmacao: 'falso_positivo' },
+    ])
+  })
+
+  it('permite voltar uma deteccao de falso positivo para confirmado antes de salvar', async () => {
+    const { container } = render(<InspecaoImagens />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'PCB-001' })).toBeInTheDocument()
+    })
+
+    const individualInput = container.querySelector('input[type="file"]:not([multiple])')
+    const validPng = new File(['conteudo'], 'placa-a.png', { type: 'image/png' })
+
+    fireEvent.change(individualInput, {
+      target: {
+        files: [validPng],
+      },
+    })
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'PCB-001' } })
+    fireEvent.click(screen.getByRole('button', { name: /executar deteccao/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Defeito 1 de 2')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /furo/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^falso positivo$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^falso positivo$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /salvar defeitos detectados/i }))
+
+    await waitFor(() => {
+      expect(api.salvarDeteccoes).toHaveBeenCalledTimes(1)
+    })
+
+    const payload = api.salvarDeteccoes.mock.calls[0][0]
+    expect(payload.detections).toMatchObject([
+      { label: 'trinca', classificacao: 'real', status_confirmacao: 'confirmado' },
+      { label: 'furo', classificacao: 'real', status_confirmacao: 'confirmado' },
+    ])
   })
 })

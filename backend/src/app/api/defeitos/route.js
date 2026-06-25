@@ -3,6 +3,7 @@ import { fail, ok, parseQuery, readJson } from '@/lib/http';
 import { serializeDefeito } from '@/lib/serializers';
 
 const STATUS_CONFIRMATION_VALUES = new Set(['confirmado', 'falso_positivo']);
+const CLASSIFICACAO_VALUES = new Set(['real', 'falso_positivo']);
 const TIPO_VALUES = new Set(['imagem', 'video']);
 
 function normalizeStatusConfirmacao(value) {
@@ -15,6 +16,16 @@ function normalizeTipo(value) {
   return TIPO_VALUES.has(tipo) ? tipo : null;
 }
 
+function normalizeClassificacao(value, statusConfirmacao) {
+  const raw = value === undefined || value === null ? '' : String(value).trim();
+  if (raw) return CLASSIFICACAO_VALUES.has(raw) ? raw : null;
+  return statusConfirmacao === 'falso_positivo' ? 'falso_positivo' : 'real';
+}
+
+function statusFromClassificacao(classificacao) {
+  return classificacao === 'falso_positivo' ? 'falso_positivo' : 'confirmado';
+}
+
 export async function GET(request) {
   try {
     const searchParams = parseQuery(request);
@@ -22,6 +33,7 @@ export async function GET(request) {
     const modeloCodigo = searchParams.get('modelo_codigo') || searchParams.get('placaCodigo');
     const classeDefeito = searchParams.get('classe_defeito');
     const statusConfirmacao = searchParams.get('status_confirmacao');
+    const classificacao = searchParams.get('classificacao');
     const tipo = searchParams.get('tipo');
 
     const where = {};
@@ -35,6 +47,11 @@ export async function GET(request) {
       const status = normalizeStatusConfirmacao(statusConfirmacao);
       if (!status) return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
       where.statusConfirmacao = status;
+    }
+    if (classificacao) {
+      const classificacaoFinal = normalizeClassificacao(classificacao);
+      if (!classificacaoFinal) return fail('classificacao invalida', 400, 'VALIDATION_ERROR');
+      where.classificacao = classificacaoFinal;
     }
     if (placaId) {
       const placaIdNumber = Number(placaId);
@@ -72,6 +89,7 @@ export async function POST(request) {
     const placaOrigemId = Number(body?.placa_id ?? body?.id_placa);
     const classeFinal = body?.classe_defeito ?? null;
     const statusConfirmacao = normalizeStatusConfirmacao(body?.status_confirmacao);
+    const classificacao = normalizeClassificacao(body?.classificacao, statusConfirmacao);
     const tipo = normalizeTipo(body?.tipo);
 
     if (!Number.isInteger(placaOrigemId)) {
@@ -79,6 +97,9 @@ export async function POST(request) {
     }
     if (!statusConfirmacao) {
       return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
+    }
+    if (!classificacao) {
+      return fail('classificacao invalida', 400, 'VALIDATION_ERROR');
     }
     if (!tipo) {
       return fail('tipo invalido', 400, 'VALIDATION_ERROR');
@@ -93,7 +114,8 @@ export async function POST(request) {
       data: {
         placaId: placaOrigemId,
         classeDefeito: classeFinal === null || classeFinal === undefined ? null : String(classeFinal),
-        statusConfirmacao,
+        statusConfirmacao: statusFromClassificacao(classificacao),
+        classificacao,
         tipo,
         ...(tipo === 'imagem' ? { dataHora: null } : {}),
         ...(tipo === 'video' && dataHora ? { dataHora } : {}),
@@ -115,6 +137,7 @@ export async function PUT(request) {
     const body = await readJson(request);
     const id = Number(body?.id);
     const statusConfirmacao = normalizeStatusConfirmacao(body?.status_confirmacao);
+    const classificacao = normalizeClassificacao(body?.classificacao, statusConfirmacao);
 
     if (!Number.isInteger(id)) {
       return fail('id do defeito e obrigatorio', 400, 'VALIDATION_ERROR');
@@ -122,10 +145,16 @@ export async function PUT(request) {
     if (!statusConfirmacao) {
       return fail('status_confirmacao invalido', 400, 'VALIDATION_ERROR');
     }
+    if (!classificacao) {
+      return fail('classificacao invalida', 400, 'VALIDATION_ERROR');
+    }
 
     const updated = await prisma.defeito.update({
       where: { id },
-      data: { statusConfirmacao },
+      data: {
+        statusConfirmacao: statusFromClassificacao(classificacao),
+        classificacao,
+      },
       include: {
         placa: true,
       },

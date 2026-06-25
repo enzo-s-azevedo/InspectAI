@@ -14,6 +14,18 @@ function normalizeTipo(item, sourceType) {
   return 'imagem';
 }
 
+function normalizeClassificacao(item) {
+  const raw = String(item?.classificacao || item?.classification || '').trim();
+  if (raw === 'falso_positivo') return 'falso_positivo';
+
+  const status = String(item?.status_confirmacao || item?.statusConfirmacao || '').trim();
+  return status === 'falso_positivo' ? 'falso_positivo' : 'real';
+}
+
+function statusFromClassificacao(classificacao) {
+  return classificacao === 'falso_positivo' ? 'falso_positivo' : 'confirmado';
+}
+
 function normalizeDataHora(item, tipo) {
   if (tipo !== 'video') return null;
 
@@ -94,12 +106,14 @@ export async function persistirDeteccoesConfirmadas({ modeloCodigo, detections, 
 
       const tipo = normalizeTipo(item, sourceType);
       const dataHora = normalizeDataHora(item, tipo);
+      const classificacao = normalizeClassificacao(item);
 
       const defeito = await client.defeito.create({
         data: {
           placaId: placa.id,
           classeDefeito,
-          statusConfirmacao: 'confirmado',
+          statusConfirmacao: statusFromClassificacao(classificacao),
+          classificacao,
           tipo,
           ...(tipo === 'imagem' ? { dataHora: null } : {}),
           ...(tipo === 'video' && dataHora ? { dataHora } : {}),
@@ -189,12 +203,14 @@ export async function persistirDeteccoesEmRelatorio({ relatorioId, placaId, dete
 
       const tipo = normalizeTipo(item, sourceType);
       const dataHora = normalizeDataHora(item, tipo);
+      const classificacao = normalizeClassificacao(item);
 
       const defeito = await client.defeito.create({
         data: {
           placaId: parsedPlacaId,
           classeDefeito,
-          statusConfirmacao: 'confirmado',
+          statusConfirmacao: statusFromClassificacao(classificacao),
+          classificacao,
           tipo,
           ...(tipo === 'imagem' ? { dataHora: null } : {}),
           ...(tipo === 'video' && dataHora ? { dataHora } : {}),

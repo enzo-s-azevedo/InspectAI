@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS "defeito" (
     "id" SERIAL NOT NULL,
     "classe_defeito" VARCHAR(255),
     "status_confirmacao" VARCHAR(50) NOT NULL DEFAULT 'confirmado',
+    "classificacao" VARCHAR(50) NOT NULL DEFAULT 'real',
     "tipo" VARCHAR(50) NOT NULL DEFAULT 'imagem',
     "data_hora" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP,
     "placa_id" INTEGER NOT NULL,
@@ -32,6 +33,7 @@ CREATE TABLE IF NOT EXISTS "defeito" (
 
 CREATE INDEX IF NOT EXISTS "idx_defeito_placa_id" ON "defeito"("placa_id");
 CREATE INDEX IF NOT EXISTS "idx_defeito_status_confirmacao" ON "defeito"("status_confirmacao");
+CREATE INDEX IF NOT EXISTS "idx_defeito_classificacao" ON "defeito"("classificacao");
 CREATE INDEX IF NOT EXISTS "idx_defeito_tipo" ON "defeito"("tipo");
 
 CREATE TABLE IF NOT EXISTS "usuario" (

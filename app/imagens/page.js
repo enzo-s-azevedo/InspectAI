@@ -23,6 +23,28 @@ function normalizeBBox(bbox) {
   return [x1, y1, x2, y2]
 }
 
+function normalizeDetectionClassificacao(detection) {
+  const classificacao = String(detection?.classificacao || detection?.classification || '').trim()
+  if (classificacao === 'real') return 'real'
+  if (classificacao === 'falso_positivo') return 'falso_positivo'
+
+  const status = String(detection?.status_confirmacao || detection?.statusConfirmacao || '').trim()
+  return status === 'falso_positivo' ? 'falso_positivo' : 'real'
+}
+
+function decorateDetection(detection) {
+  const classificacao = normalizeDetectionClassificacao(detection)
+  return {
+    ...detection,
+    classificacao,
+    status_confirmacao: classificacao === 'falso_positivo' ? 'falso_positivo' : 'confirmado',
+  }
+}
+
+function getClassificacaoLabel(classificacao) {
+  return classificacao === 'falso_positivo' ? 'Falso positivo' : 'Confirmado'
+}
+
 function isAllowedBatchImage(file) {
   const name = String(file?.name || '').toLowerCase()
   return BATCH_IMAGE_EXTENSIONS.some((extension) => name.endsWith(extension))
@@ -83,6 +105,14 @@ export default function InspecaoImagens() {
   }, [detections, selectedIndex])
 
   const selectedClassesSet = useMemo(() => new Set(selectedClasses), [selectedClasses])
+
+  const detectionSummary = useMemo(() => {
+    const falsos = detections.filter((item) => normalizeDetectionClassificacao(item) === 'falso_positivo').length
+    return {
+      reais: detections.length - falsos,
+      falsos,
+    }
+  }, [detections])
 
   const batchProgress = useMemo(() => {
     if (!batchQueue.length) return 0
@@ -205,7 +235,8 @@ export default function InspecaoImagens() {
 
       const [x1, y1, x2, y2] = normalizedBBox
       const selected = index === selectedIndex
-      const color = selected ? '#9d5ff5' : '#f97316'
+      const isFalsePositive = normalizeDetectionClassificacao(detection) === 'falso_positivo'
+      const color = isFalsePositive ? '#ef4444' : selected ? '#9d5ff5' : '#f97316'
       const boxX = x1 * scaleX
       const boxY = y1 * scaleY
       const boxWidth = (x2 - x1) * scaleX
@@ -215,7 +246,7 @@ export default function InspecaoImagens() {
       context.lineWidth = selected ? 3 : 2
       context.strokeRect(boxX, boxY, boxWidth, boxHeight)
 
-      const label = `${detection?.label || 'defeito'} ${formatConfidence(detection?.confidence)}`
+      const label = `${detection?.label || 'defeito'} ${formatConfidence(detection?.confidence)} ${isFalsePositive ? 'FP' : 'CONF'}`
       context.font = '600 12px "IBM Plex Mono", monospace'
       const textWidth = context.measureText(label).width
       const textX = boxX
@@ -322,7 +353,7 @@ export default function InspecaoImagens() {
 
     setActiveTab('individual')
     setImageFile(item.file)
-    setDetections(Array.isArray(item.detections) ? item.detections : [])
+    setDetections(Array.isArray(item.detections) ? item.detections.map(decorateDetection) : [])
     setSavedDetections([])
     setSavedPlaca(null)
     setAnalysisMeta({ inputType: 'imagem' })
@@ -442,7 +473,7 @@ export default function InspecaoImagens() {
 
       const result = await api.analisarImagem(formData)
 
-      const nextDetections = Array.isArray(result.detections) ? result.detections : []
+      const nextDetections = Array.isArray(result.detections) ? result.detections.map(decorateDetection) : []
       setDetections(nextDetections)
       setSavedDetections([])
       setSavedPlaca(null)
@@ -476,9 +507,10 @@ export default function InspecaoImagens() {
 
     try {
       setIsSaving(true)
+      const normalizedDetections = detections.map(decorateDetection)
       const result = await api.salvarDeteccoes({
         modelo_codigo: selectedModelCodigo,
-        detections,
+        detections: normalizedDetections,
         source_type: analysisMeta?.inputType || 'imagem',
       })
 
@@ -502,6 +534,25 @@ export default function InspecaoImagens() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const updateSelectedDetectionClassificacao = (classificacao) => {
+    if (!selectedDetection) return
+
+    const currentClassificacao = normalizeDetectionClassificacao(selectedDetection)
+    const nextClassificacao = classificacao === currentClassificacao ? 'real' : classificacao
+
+    setDetections((current) => current.map((item, index) => (
+      index === selectedIndex
+        ? decorateDetection({
+            ...item,
+            classificacao: nextClassificacao,
+            status_confirmacao: nextClassificacao === 'falso_positivo' ? 'falso_positivo' : 'confirmado',
+          })
+        : item
+    )))
+    setSavedDetections([])
+    setSavedPlaca(null)
   }
 
   const cancelDetections = () => {
@@ -554,7 +605,7 @@ export default function InspecaoImagens() {
           formData.append('classes', JSON.stringify(classesArray))
 
           const result = await api.analisarImagem(formData)
-          const detectionsResult = Array.isArray(result?.detections) ? result.detections : []
+          const detectionsResult = Array.isArray(result?.detections) ? result.detections.map(decorateDetection) : []
 
           nextQueue.push({
             ...createBatchItem(file, 'processado', ''),
@@ -846,11 +897,30 @@ export default function InspecaoImagens() {
 
               <div className="text-center">
                 {selectedDetection ? (
-                  <>
-                    <p className="text-sm text-text-primary font-mono">Defeito {selectedIndex + 1} de {detections.length}</p>
-                    <p className="text-sm text-text-secondary font-mono">Classe: {selectedDetection.label}</p>
-                    <p className="text-sm text-text-secondary font-mono">Confianca: {formatConfidence(selectedDetection.confidence)}</p>
-                  </>
+	                  <>
+	                    <p className="text-sm text-text-primary font-mono">Defeito {selectedIndex + 1} de {detections.length}</p>
+	                    <p className="text-sm text-text-secondary font-mono">Classe: {selectedDetection.label}</p>
+	                    <p className="text-sm text-text-secondary font-mono">Confianca: {formatConfidence(selectedDetection.confidence)}</p>
+	                    <p className={`text-sm font-mono ${normalizeDetectionClassificacao(selectedDetection) === 'falso_positivo' ? 'text-critical-text' : 'text-success-text'}`}>
+	                      Classificacao: {getClassificacaoLabel(normalizeDetectionClassificacao(selectedDetection))}
+	                    </p>
+	                    <div className="mt-2 inline-flex rounded-lg border border-border bg-bg-elevated p-1">
+	                      <button
+	                        type="button"
+	                        onClick={() => updateSelectedDetectionClassificacao('real')}
+	                        className={`px-3 py-1.5 rounded-md text-[10px] uppercase font-black font-mono transition-colors cursor-pointer ${normalizeDetectionClassificacao(selectedDetection) === 'real' ? 'bg-success-text text-black' : 'text-text-secondary hover:text-text-primary'}`}
+	                      >
+	                        Confirmado
+	                      </button>
+	                      <button
+	                        type="button"
+	                        onClick={() => updateSelectedDetectionClassificacao('falso_positivo')}
+	                        className={`px-3 py-1.5 rounded-md text-[10px] uppercase font-black font-mono transition-colors cursor-pointer ${normalizeDetectionClassificacao(selectedDetection) === 'falso_positivo' ? 'bg-critical-text text-black' : 'text-text-secondary hover:text-text-primary'}`}
+	                      >
+	                        Falso positivo
+	                      </button>
+	                    </div>
+	                  </>
                 ) : (
                   <p className="text-sm text-text-muted font-mono">Nenhum defeito selecionado</p>
                 )}
@@ -873,20 +943,22 @@ export default function InspecaoImagens() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {detections.map((detection, index) => {
-                  const isSelected = index === selectedIndex
-                  return (
-                    <button
-                      key={`${detection.label || 'defeito'}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedIndex(index)}
-                      className={`px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer ${isSelected ? 'border-amber bg-amber/10 text-amber' : 'border-border bg-bg-elevated text-text-secondary hover:border-amber'}`}
-                    >
-                      <p className="text-xs font-black uppercase font-mono">{detection.label || 'defeito'}</p>
-                      <p className="text-[11px] font-mono">Conf: {formatConfidence(detection.confidence)}</p>
-                    </button>
-                  )
-                })}
+	                {detections.map((detection, index) => {
+	                  const isSelected = index === selectedIndex
+	                  const isFalsePositive = normalizeDetectionClassificacao(detection) === 'falso_positivo'
+	                  return (
+	                    <button
+	                      key={`${detection.label || 'defeito'}-${index}`}
+	                      type="button"
+	                      onClick={() => setSelectedIndex(index)}
+	                      className={`px-3 py-2 rounded-lg border text-left transition-colors cursor-pointer ${isFalsePositive ? 'border-critical-border bg-critical-bg/20 text-critical-text' : isSelected ? 'border-amber bg-amber/10 text-amber' : 'border-border bg-bg-elevated text-text-secondary hover:border-amber'}`}
+	                    >
+	                      <p className="text-xs font-black uppercase font-mono">{detection.label || 'defeito'}</p>
+	                      <p className="text-[11px] font-mono">Conf: {formatConfidence(detection.confidence)}</p>
+	                      <p className="text-[10px] font-mono uppercase">{getClassificacaoLabel(normalizeDetectionClassificacao(detection))}</p>
+	                    </button>
+	                  )
+	                })}
 
                 {!detections.length && (
                   <p className="text-sm text-text-muted font-mono">Nenhum defeito detectado ainda</p>
@@ -907,11 +979,12 @@ export default function InspecaoImagens() {
             )}
           </div>
 
-          <div>
-            <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Quantidade de defeitos</p>
-            <p className="text-base font-mono text-amber">{detections.length} defeitos temporarios</p>
-            <p className="text-sm font-mono text-text-secondary">Persistidos: {savedDetections.length}</p>
-          </div>
+	          <div>
+	            <p className="text-xs uppercase font-black tracking-widest text-text-secondary">Quantidade de defeitos</p>
+	            <p className="text-base font-mono text-amber">{detections.length} defeitos temporarios</p>
+	            <p className="text-sm font-mono text-text-secondary">Confirmados: {detectionSummary.reais} · Falsos positivos: {detectionSummary.falsos}</p>
+	            <p className="text-sm font-mono text-text-secondary">Persistidos: {savedDetections.length}</p>
+	          </div>
 
           <div className="flex flex-wrap gap-2">
             <button
