@@ -28,6 +28,7 @@ usuario.id
 - `id SERIAL PRIMARY KEY`
 - `classe_defeito VARCHAR(255) NULL`
 - `status_confirmacao VARCHAR(50) NOT NULL DEFAULT 'confirmado'`
+- `classificacao VARCHAR(50) NOT NULL DEFAULT 'real'`
 - `tipo VARCHAR(50) NOT NULL DEFAULT 'imagem'`
 - `data_hora TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP`
 - `placa_id INTEGER NOT NULL`
