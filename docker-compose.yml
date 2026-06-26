@@ -1,0 +1,69 @@
+services:
+  ai:
+    build: ./yolo/INTERFACE
+    container_name: inspectai_ai
+    restart: unless-stopped
+    ports:
+      - "5005:5000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; d=json.loads(urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5).read().decode()); assert d.get('status') == 'healthy' and d.get('model_loaded') is True",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    container_name: inspectai_backend
+    restart: unless-stopped
+    depends_on:
+      ai:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AI_SERVICE_URL: http://inspectai_ai:5000
+      NODE_ENV: production
+    ports:
+      - "3001:3000"
+
+  frontend:
+    build: .
+    container_name: inspectai_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:3000
+      NEXT_PUBLIC_API_BASE_URL: /backend-api
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+  integration-tests:
+    image: node:20-alpine
+    container_name: inspectai_integration_tests
+    profiles: ["test"]
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    depends_on:
+      ai:
+        condition: service_healthy
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+    environment:
+      BACKEND_BASE_URL: http://backend:3000/api
+      FRONTEND_BASE_URL: http://frontend:3000
+      FRONTEND_API_BASE_URL: http://frontend:3000/backend-api
+      AI_BASE_URL: http://inspectai_ai:5000
+      DATABASE_URL: ${DATABASE_URL}
+      REPORT_OUTPUT_PATH: /workspace/integration-report.md
+    command: ["node", "scripts/run-integration-tests.js"]

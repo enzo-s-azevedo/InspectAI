@@ -1,76 +1,68 @@
 # InspectAI
 
-## Descrição
+InspectAI é uma plataforma web moderna e robusta para inspeção visual automatizada de placas de circuito impresso (PCBs) utilizando inteligência artificial (YOLOv8) para identificação e classificação de falhas de montagem e soldagem.
 
-O InspectAI é um sistema para detecção automática de defeitos em placas
-eletrônicas a partir de imagens e vídeos. A aplicação permite
-identificar, classificar e armazenar defeitos, além de fornecer
-mecanismos de análise e geração de relatórios para apoio ao controle de
-qualidade.
+---
 
-------------------------------------------------------------------------
+## 🚀 Arquitetura e Componentes
 
-## Tecnologias Utilizadas
+O projeto é dividido em três serviços principais orquestrados via Docker Compose:
 
+1. **Frontend (Next.js)**: Painel do operador e administração com autenticação, dashboards analíticos, tabelas de controle de acesso (RBAC), tela de detecção individual/lote e download de relatórios.
+2. **Backend (Next.js API)**: API robusta com Prisma ORM, segurança de rotas com JWT e geração dinâmica de relatórios em PDF.
+3. **Serviço de IA (YOLO Flask)**: Microsserviço responsável pela inferência direta das imagens utilizando o modelo YOLOv8 (`best.pt`).
 
--   Front-end e Back-end: Next.js (JavaScript)
--   Estilização: Tailwind CSS
--   Banco de Dados: MySQL
--   Containerização: Docker
+Consulte [ARCHITECTURE.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/ARCHITECTURE.md) para detalhes detalhados da arquitetura.
 
-------------------------------------------------------------------------
+---
 
-## Funcionalidades
+## 🛠️ Instalação e Execução Rápida (Docker)
 
-### 1. Detecção em Imagens
+Certifique-se de preencher a variável `DATABASE_URL` no arquivo `.env` (baseado em `.env.example`). Em seguida, execute:
 
-O sistema permite a análise de uma ou múltiplas imagens contendo
-componentes eletrônicos.
+```bash
+docker compose up --build
+```
 
-**Entrada:** 
-- Uma ou mais imagens
+Para detalhes adicionais de setup ou execução nativa passo a passo, veja [INSTALLATION.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/INSTALLATION.md).
 
-**Saída:** 
-- Identificação dos defeitos presentes 
-- Recorte automático das regiões com defeito (com zoom) 
-- Classificação do tipo de defeito 
-- Navegação entre defeitos detectados
+---
 
-------------------------------------------------------------------------
+## 📂 Organização do Projeto
 
 ### 2. Banco de Dados de Defeitos
 
-O sistema mantém um repositório estruturado de defeitos.
+Para detalhes de regras de integridade relacional, regras de rastreabilidade (imutabilidade do criador vs histórico do editor administrador), veja [DATABASE.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/backend/DATABASE.md).
 
-**Requisitos:** 
-- Armazenamento de tipos de defeitos por tipo de componente 
-- Associação dos defeitos às placas analisadas 
-- Geração de métricas: 
-  - Quantidade de ocorrências 
-  - Percentual em relação ao total de defeitos
+---
 
-------------------------------------------------------------------------
+## 🔌 Contrato de APIs
 
 ### 3. Controle de Usuários
 
-#### Administrador
+---
 
--   Gerenciamento de usuários e permissões
--   Definição de acessos (visualização, edição e validação)
--   Marcação de detecções como falso positivo
+## 📘 Manual do Usuário
 
-#### Funcionário
+Instruções operacionais sobre como logar, cadastrar novos modelos, efetuar inspeções individuais e em lote, classificar falsos positivos e gerar relatórios estão disponíveis em [USER_MANUAL.md](file:///c:/Users/Diogo/Desktop/PI/InspectAI/USER_MANUAL.md).
 
--   Visualização dos defeitos detectados
--   Interação com o sistema conforme permissões atribuídas
+---
 
-------------------------------------------------------------------------
+## 🧪 Execução de Testes
 
 ### 4. Geração de Relatórios
 
-O sistema permite a criação de relatórios detalhados contendo:
+### Testes do Frontend:
+```bash
+cmd.exe /c npm test
+```
 
--   Informações dos defeitos detectados
--   Origem da detecção (imagem, vídeo ou lote)
--   Data e hora das ocorrências
--   Quantidade e classificação dos defeitos
+### Testes do Backend:
+```bash
+cmd.exe /c npm --prefix backend test
+```
+
+### Testes de Integração Ponta a Ponta (E2E Playwright):
+```bash
+cmd.exe /c npx playwright test
+```

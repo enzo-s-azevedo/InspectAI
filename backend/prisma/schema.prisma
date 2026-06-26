@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Modelo {
+  codigo String @id @db.VarChar(100)
+
+  placas Placa[]
+
+  @@map("modelo")
+}
+
+model Placa {
+  id           Int    @id @default(autoincrement())
+  modeloCodigo String @map("modelo_codigo") @db.VarChar(100)
+  modelo       Modelo @relation(fields: [modeloCodigo], references: [codigo], onDelete: Cascade, onUpdate: Cascade)
+
+  defeitos Defeito[]
+  relatorios Relatorio[]
+
+  @@index([modeloCodigo], map: "idx_placa_modelo_codigo")
+  @@map("placa")
+}
+
+model Defeito {
+  id                Int    @id @default(autoincrement())
+  classeDefeito     String? @map("classe_defeito") @db.VarChar(255)
+  statusConfirmacao String @default("confirmado") @map("status_confirmacao") @db.VarChar(50)
+  classificacao     String @default("real") @db.VarChar(50)
+  tipo              String @default("imagem") @db.VarChar(50)
+  dataHora          DateTime? @default(now()) @map("data_hora") @db.Timestamp(0)
+  placaId           Int    @map("placa_id")
+  placa             Placa  @relation(fields: [placaId], references: [id])
+  relatorios        RelatorioDefeito[]
+
+  @@index([placaId], map: "idx_defeito_placa_id")
+  @@index([statusConfirmacao], map: "idx_defeito_status_confirmacao")
+  @@index([classificacao], map: "idx_defeito_classificacao")
+  @@index([tipo], map: "idx_defeito_tipo")
+  @@map("defeito")
+}
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  senhaHash String   @map("senha_hash") @db.VarChar(255)
+  cargo     String   @db.VarChar(32)
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamp(0)
+
+  relatoriosCriados Relatorio[] @relation("RelatorioCriador")
+  relatoriosUltimoAcesso Relatorio[] @relation("RelatorioUltimoAcesso")
+
+  @@map("usuario")
+}
+
+model Relatorio {
+  id                    Int      @id @default(autoincrement())
+  placaId               Int      @map("placa_id")
+  idUsuarioCriador      Int      @map("id_usuario_criador")
+  idUsuarioUltimoAcesso Int?     @map("id_usuario_ultimo_acesso")
+  criadoEm              DateTime @default(now()) @map("criado_em") @db.Timestamp(0)
+  atualizadoEm          DateTime @updatedAt @map("atualizado_em") @db.Timestamp(0)
+
+  placa                 Placa    @relation(fields: [placaId], references: [id])
+  usuarioCriador        Usuario  @relation("RelatorioCriador", fields: [idUsuarioCriador], references: [id])
+  usuarioUltimoAcesso   Usuario? @relation("RelatorioUltimoAcesso", fields: [idUsuarioUltimoAcesso], references: [id])
+  defeitos              RelatorioDefeito[]
+  imagens               RelatorioImagem[]
+
+  @@index([placaId], map: "idx_relatorio_placa")
+  @@index([idUsuarioCriador], map: "idx_relatorio_usuario_criador")
+  @@index([idUsuarioUltimoAcesso], map: "idx_relatorio_usuario_ultimo_acesso")
+  @@map("relatorio")
+}
+
+model RelatorioDefeito {
+  id              Int       @id @default(autoincrement())
+  relatorioId     Int       @map("relatorio_id")
+  defeitoId       Int       @map("defeito_id")
+  statusValidacao String    @default("pendente") @map("status_validacao") @db.VarChar(50)
+  observacao      String?   @db.Text
+  criadoEm        DateTime  @default(now()) @map("criado_em") @db.Timestamp(0)
+
+  relatorio       Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
+  defeito         Defeito   @relation(fields: [defeitoId], references: [id], onDelete: Cascade)
+
+  @@index([relatorioId], map: "idx_relatorio_defeito_relatorio")
+  @@index([defeitoId], map: "idx_relatorio_defeito_defeito")
+  @@map("relatorio_defeito")
+}
+
+model RelatorioImagem {
+  id            Int       @id @default(autoincrement())
+  relatorioId   Int       @map("relatorio_id")
+  caminhoImagem String    @map("caminho_imagem") @db.VarChar(255)
+  tipo          String    @default("original") @db.VarChar(30)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamp(0)
+
+  relatorio     Relatorio @relation(fields: [relatorioId], references: [id], onDelete: Cascade)
+
+  @@index([relatorioId], map: "idx_relatorio_imagem_relatorio")
+  @@map("relatorio_imagem")
+}

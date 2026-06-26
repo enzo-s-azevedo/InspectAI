@@ -1,0 +1,16 @@
+path: C:\Users\enzoa\Desktop\faculdade\estágio\teste dataset empresa\yolo\data
+train: train/images
+val: validation/images
+nc: 11
+names:
+- C+
+- C-
+- R+
+- R-
+- R/CFaltante
+- Soldagem+
+- SoldagemCurtoCircuito
+- SoldagemFaltando
+- U+
+- U-
+- UFaltante
