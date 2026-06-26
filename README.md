@@ -64,5 +64,5 @@ cmd.exe /c npm --prefix backend test
 
 ### Testes de Integração Ponta a Ponta (E2E Playwright):
 ```bash
-cmd.exe /c npx playwright test
+npx playwright test --ui
 ```
